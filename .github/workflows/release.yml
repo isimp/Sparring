@@ -21,7 +21,7 @@ on:
       categories:
         description: "Hexium category slugs, comma separated"
         required: false
-        default: "PvP,Mechanics,Open Source"
+        default: "PvP,Combat,Mechanics,Open Source,Valheim 1.0"
 
 permissions:
   contents: write
