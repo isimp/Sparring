@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Sparring
@@ -33,6 +34,20 @@ namespace Sparring
 
         private static ZDOID _lastFoe = ZDOID.None;
         private static string _lastFoeName = "";
+
+        /// <summary>
+        /// How long after an invitation ends without a duel before the same two players can
+        /// exchange another. Every shown challenge plays a sound and puts a prompt on screen, so
+        /// without a pause a declined challenger could repeat it as fast as they can type.
+        /// </summary>
+        private const double RepeatSeconds = 15.0;
+
+        /// <summary>
+        /// Players we recently had an invitation with, and when that pause runs out. Kept on both
+        /// sides: the challenger's copy stops an ordinary client at the source, and the challenged
+        /// player's copy stops one that ignores its own.
+        /// </summary>
+        private static readonly Dictionary<ZDOID, double> _resting = new Dictionary<ZDOID, double>();
 
         public static bool Active => !_opponent.IsNone();
         public static ZDOID Opponent => _opponent;
@@ -82,7 +97,8 @@ namespace Sparring
 
             if (!Valid(me, now, out var reason))
             {
-                EndLocal(reason, notify: true);
+                if (reason == EndReason.LeftRing) Concede(me, EndReason.LeftRing);
+                else EndLocal(reason, notify: true);
                 return;
             }
 
@@ -102,10 +118,15 @@ namespace Sparring
             if (!_outgoing.IsNone())
             {
                 if (now > _outgoingUntil)
+                {
+                    Rest(_outgoing);
                     ClearOutgoing(Messages.Unanswered, _outgoingName);
+                }
                 else if (Drifted(me, _outgoing, _outgoingRadius))
                 {
+                    // Reaches the challenged player as a withdrawal, so their prompt goes too.
                     Link.SendDecline(_outgoing);
+                    Rest(_outgoing);
                     ClearOutgoing(Messages.YouWalkedOff, _outgoingName);
                 }
             }
@@ -113,10 +134,14 @@ namespace Sparring
             if (!_incoming.IsNone())
             {
                 if (now > _incomingUntil)
+                {
+                    Rest(_incoming);
                     ClearIncoming(Messages.Expired, _incomingName);
+                }
                 else if (Drifted(me, _incoming, _incomingRadius))
                 {
-                    Link.SendDecline(_incoming);
+                    Link.SendBusy(_incoming, Busy.TooFar);
+                    Rest(_incoming);
                     ClearIncoming(Messages.TooFarNow, _incomingName);
                 }
             }
@@ -163,16 +188,26 @@ namespace Sparring
                 return true;
             }
 
-            var theirs = ZDOMan.instance?.GetZDO(_opponent);
-            if (theirs == null) return false;
-
-            if (Vector3.Distance(me.transform.position, theirs.GetPosition()) > Plugin.OpponentRangeFor(_terms.Radius))
+            // Our own position first. It is the one thing this client knows for certain, and a
+            // fighter who has left the ring must not have that read as the other kind of end just
+            // because they have also gone far enough to trip the check below.
+            //
+            // Once blows count, stepping out concedes: the ring is the fight, and leaving it is a
+            // way of leaving the fight. Before that, during the countdown, nothing has been fought
+            // over, so it only calls the duel off.
+            if (DistanceFromCenter(me) > _terms.Radius)
             {
-                reason = EndReason.OutOfRange;
+                reason = _terms.Begun ? EndReason.LeftRing : EndReason.OutOfRange;
                 return false;
             }
 
-            if (DistanceFromCenter(me) > _terms.Radius)
+            var theirs = ZDOMan.instance?.GetZDO(_opponent);
+            if (theirs == null) return false;
+
+            // The opponent's position, which this client only knows second-hand. Leaving the ring
+            // on their side is their client's to concede; this only catches an opponent who has
+            // gone somewhere no ring could put them, and calls it off.
+            if (Vector3.Distance(me.transform.position, theirs.GetPosition()) > Plugin.OpponentRangeFor(_terms.Radius))
             {
                 reason = EndReason.OutOfRange;
                 return false;
@@ -202,24 +237,26 @@ namespace Sparring
             if (target == me) { Say(Messages.NotYourself); return; }
             if (HasOutgoing) { Say(string.Format(Messages.AlreadyChallenged, _outgoingName)); return; }
 
-            // The game's own rule for switching PvP: ten seconds out of combat. A duel cannot be
-            // opened as an escape from a fight already in progress.
-            if (Plugin.RequireOutOfCombat && !me.CanSwitchPVP())
-            {
-                Say(Messages.InCombat);
-                return;
-            }
+            var name = target.GetPlayerName();
+            var id = target.GetZDOID();
 
-            if (me.IsPVPEnabled())
-            {
-                Say(Messages.PvpOn);
-                return;
-            }
+            var mine = Readiness(me, radius);
+            if (mine != Busy.None) { Say(YouCannot(mine)); return; }
 
-            if (!GroundIsClear(me, radius)) { Say(Messages.CreaturesAbout); return; }
+            if (Resting(id)) { Say(string.Format(Messages.WaitBeforeAgain, name)); return; }
 
-            _outgoing = target.GetZDOID();
-            _outgoingName = target.GetPlayerName();
+            // Someone further off than the proposed ring would cancel on arrival, so it is not
+            // sent. This is also what keeps a rematch to someone standing near you.
+            if (Drifted(me, id, radius)) { Say(string.Format(Messages.TooFarAway, name)); return; }
+
+            // The two parts of the other player's state that can be read from here. The rest —
+            // combat, sitting, sleeping — is only known on their own machine, and is checked there
+            // when the challenge arrives.
+            if (target.IsDead()) { Say(string.Format(Messages.TheyBusy, name)); return; }
+            if (target.IsPVPEnabled()) { Say(string.Format(Messages.TheyPvpOn, name)); return; }
+
+            _outgoing = id;
+            _outgoingName = name;
             _outgoingRadius = radius;
             _outgoingUntil = Lease.Now + Plugin.InviteSeconds;
 
@@ -232,27 +269,26 @@ namespace Sparring
             var me = Player.m_localPlayer;
             if (me == null || challenger.IsNone()) return;
 
-            if (Active)
-            {
-                // A reply, not a result: the challenger is waiting for an answer, and would ignore
-                // a result about a duel they are not in.
-                Link.SendDecline(challenger);
-                return;
-            }
-
             radius = Plugin.ClampRadius(radius);
 
-            // They challenged us while we were challenging them. Take it as both saying yes.
-            if (_outgoing == challenger)
+            // Already on screen. Showing it again would only replay the sound.
+            if (HasInvite && _incoming == challenger) return;
+
+            // Everything that can turn a challenge down is decided here, on the machine it was
+            // sent to, before any sound or prompt. The challenger's own checks are a courtesy that
+            // spares a round trip; these are the ones a modified client cannot skip, and a refusal
+            // here costs the player being challenged nothing — they never see it.
+            var refusal = Refusal(me, challenger, radius);
+            if (refusal == Busy.None && _outgoing == challenger)
             {
+                // They challenged us while we were challenging them. Take it as both saying yes.
                 Accept(challenger, name, radius);
                 return;
             }
 
-            if (HasInvite && _incoming != challenger)
+            if (refusal != Busy.None)
             {
-                // One offer on screen at a time; a second one is declined rather than replacing it.
-                Link.SendDecline(challenger);
+                Link.SendBusy(challenger, refusal);
                 return;
             }
 
@@ -265,16 +301,65 @@ namespace Sparring
             Sound.Challenge();
         }
 
+        /// <summary>
+        /// Why a challenge from this player should not be shown, or <see cref="Busy.None"/> if it
+        /// should.
+        /// </summary>
+        private static Busy Refusal(Player me, ZDOID challenger, float radius)
+        {
+            if (Active) return Busy.Dueling;
+
+            // One offer on screen at a time; a second one is refused rather than replacing it.
+            if (HasInvite && _incoming != challenger) return Busy.Answering;
+
+            if (Resting(challenger)) return Busy.Cooldown;
+            if (Drifted(me, challenger, radius)) return Busy.TooFar;
+
+            return Readiness(me, radius);
+        }
+
+        /// <summary>
+        /// Whether this player is free to start a duel, and if not, why. The same test whether
+        /// they are challenging, being challenged, or accepting, so the three cannot disagree.
+        ///
+        /// Being out of combat is the game's own rule for switching PvP, ten seconds without a
+        /// fight, so a duel cannot be opened as an escape from one already under way. Having PvP
+        /// on is refused because it would expose the fighters to everyone, which is the thing a
+        /// duel is meant to avoid.
+        /// </summary>
+        private static Busy Readiness(Player me, float radius)
+        {
+            if (me.IsDead() || me.InCutscene() || me.IsTeleporting()) return Busy.Occupied;
+            if (me.IsAttached() || me.InBed() || me.IsSleeping()) return Busy.Occupied;
+            if (me.IsPVPEnabled()) return Busy.PvpOn;
+            if (Plugin.RequireOutOfCombat && !me.CanSwitchPVP()) return Busy.InCombat;
+            if (!GroundIsClear(me, radius)) return Busy.CreaturesNear;
+            return Busy.None;
+        }
+
+        /// <summary>What to tell this player when they are the one who is not free.</summary>
+        private static string YouCannot(Busy why)
+        {
+            switch (why)
+            {
+                case Busy.InCombat: return Messages.InCombat;
+                case Busy.PvpOn: return Messages.PvpOn;
+                case Busy.CreaturesNear: return Messages.CreaturesAbout;
+                default: return Messages.YouAreBusy;
+            }
+        }
+
         public static void Accept()
         {
             if (_incoming.IsNone()) { Say(Messages.NoChallenge); return; }
 
+            // Accepting is refused, not the challenge: it stays on screen, so it can still be
+            // taken once whatever is in the way has cleared.
             var me = Player.m_localPlayer;
-            if (me != null && Plugin.RequireOutOfCombat && !me.CanSwitchPVP())
-            {
-                Say(Messages.InCombat);
-                return;
-            }
+            if (me == null) return;
+
+            var mine = Readiness(me, _incomingRadius);
+            if (mine != Busy.None) { Say(YouCannot(mine)); return; }
 
             Accept(_incoming, _incomingName, _incomingRadius);
         }
@@ -316,8 +401,6 @@ namespace Sparring
             var me = Player.m_localPlayer;
             if (me == null) return;
 
-            if (!GroundIsClear(me, radius)) { Say(Messages.CreaturesAbout); return; }
-
             var theirs = ZDOMan.instance?.GetZDO(challenger);
             if (theirs == null)
             {
@@ -343,6 +426,7 @@ namespace Sparring
             if (_incoming.IsNone()) { Say(Messages.NoChallenge); return; }
 
             Link.SendDecline(_incoming);
+            Rest(_incoming);
             ClearIncoming(Messages.YouDeclined, _incomingName);
         }
 
@@ -351,23 +435,77 @@ namespace Sparring
             if (_outgoing.IsNone()) { Say(Messages.NoneOut); return; }
 
             Link.SendDecline(_outgoing);
+            Rest(_outgoing);
             ClearOutgoing(Messages.YouWithdrew, _outgoingName);
         }
 
         public static void ReceiveReply(ZDOID responder, bool accepted, Lease.Terms terms)
         {
-            if (_outgoing.IsNone() || _outgoing != responder) return;
+            // A "no" from the player who challenged us: they withdrew, so the prompt goes.
+            if (!accepted && !_incoming.IsNone() && _incoming == responder)
+            {
+                Rest(responder);
+                ClearIncoming(Messages.TheyWithdrew, _incomingName);
+                return;
+            }
+
+            if (_outgoing.IsNone() || _outgoing != responder)
+            {
+                // A "yes" to a challenge we have since withdrawn or let lapse. Their side has
+                // already started a countdown for a duel that is not happening, so tell them now
+                // rather than leave it to run until the pairing gives up. Only answered for
+                // someone we did just have a challenge with, so this cannot be used to make us
+                // send messages to anyone at all.
+                if (accepted && Resting(responder)) Link.SendResult(responder, EndReason.Withdrew);
+                return;
+            }
 
             var name = _outgoingName;
             ClearOutgoing(null, null);
 
-            if (!accepted) { Say(string.Format(Messages.TheyDeclined, name)); return; }
+            if (!accepted)
+            {
+                Rest(responder);
+                Say(string.Format(Messages.TheyDeclined, name));
+                return;
+            }
 
             // The terms are adopted as they arrive, not recomputed. Two machines each working out
             // "the middle" from positions a moment apart would draw two different rings.
             terms.Radius = Plugin.ClampRadius(terms.Radius);
             terms.StartAtMs = SaneStart(terms.StartAtMs);
             BeginWith(responder, name, terms);
+        }
+
+        /// <summary>
+        /// A challenge of ours turned down before it was shown, with the reason. A refusal for
+        /// repeating too soon also starts our own pause, so this client stops asking.
+        /// </summary>
+        public static void ReceiveBusy(ZDOID from, Busy why)
+        {
+            if (_outgoing.IsNone() || _outgoing != from) return;
+
+            var name = _outgoingName;
+            ClearOutgoing(null, null);
+            if (why == Busy.Cooldown) Rest(from);
+
+            Say(string.Format(TheyCannot(why), name));
+        }
+
+        /// <summary>What to tell a challenger about why the other player is not free.</summary>
+        private static string TheyCannot(Busy why)
+        {
+            switch (why)
+            {
+                case Busy.InCombat: return Messages.TheyInCombat;
+                case Busy.PvpOn: return Messages.TheyPvpOn;
+                case Busy.CreaturesNear: return Messages.TheyCreaturesAbout;
+                case Busy.Dueling: return Messages.TheyDueling;
+                case Busy.Answering: return Messages.TheyAnswering;
+                case Busy.Cooldown: return Messages.WaitBeforeAgain;
+                case Busy.TooFar: return Messages.TooFarAway;
+                default: return Messages.TheyBusy;
+            }
         }
 
         /// <summary>
@@ -419,14 +557,22 @@ namespace Sparring
         {
             if (!Active) { Say(Messages.NotDueling); return; }
 
+            Concede(Player.m_localPlayer, EndReason.Forfeited);
+        }
+
+        /// <summary>
+        /// Losing without being beaten down: giving up, or leaving the ring. The opponent wins as
+        /// they would from a yield, and this side is picked up to the loser's floor.
+        /// </summary>
+        private static void Concede(Player me, EndReason reason)
+        {
             var name = _opponentName;
             var winner = _opponent;
-            var me = Player.m_localPlayer;
 
             Scorecard.SetOutcome(DuelOutcome.Lost);
-            EndLocal(EndReason.Forfeited, notify: true);
+            EndLocal(reason, notify: true);
             Recovery.Restore(me, Plugin.YieldHealth);
-            Link.SendAnnounce(winner, name, MyName(), EndReason.Forfeited);
+            Link.SendAnnounce(winner, name, MyName(), reason);
         }
 
         /// <summary>
@@ -513,16 +659,13 @@ namespace Sparring
 
             // The same reason means the opposite thing on this side: they are telling us they
             // yielded, which is a win here.
-            if (reason == EndReason.Yielded || reason == EndReason.Forfeited)
-            {
-                Scorecard.SetOutcome(DuelOutcome.Won);
-            }
+            if (reason.Decided()) Scorecard.SetOutcome(DuelOutcome.Won);
 
             EndLocal(reason, notify: false);
 
-            // Only an ending somebody won restores health; otherwise walking out of the ring would
-            // be a free heal.
-            if (reason != EndReason.Yielded && reason != EndReason.Forfeited) return;
+            // Only an ending somebody won restores health; a duel that was merely called off
+            // would otherwise be a free heal.
+            if (!reason.Decided()) return;
 
             Recovery.Restore(me, Plugin.VictoryHealth);
 
@@ -545,7 +688,7 @@ namespace Sparring
 
             // Before the fields are cleared: the card needs the terms for the duration and the
             // opponent for where to send our half. A summary is shown only for a duel somebody won.
-            var decided = reason == EndReason.Yielded || reason == EndReason.Forfeited;
+            var decided = reason.Decided();
             Scorecard.End(decided);
             if (decided && !opponent.IsNone())
             {
@@ -567,9 +710,10 @@ namespace Sparring
 
             if (notify && !opponent.IsNone()) Link.SendResult(opponent, reason);
 
-            // Ends nobody won get their own word here; a yield or a forfeit is announced to
-            // everyone by the side that lost, so those say nothing extra on this screen.
+            // Ends nobody won get their own word here; one somebody won is announced to everyone
+            // by the side that lost, so those say nothing extra on this screen.
             if (reason == EndReason.OutOfRange) Say(Messages.OutOfRing);
+            else if (reason == EndReason.Withdrew && name.Length > 0) Say(string.Format(Messages.TheyWithdrew, name));
             else if (reason == EndReason.LeaseLapsed && name.Length > 0) Say(string.Format(Messages.LostTrack, name));
         }
 
@@ -618,6 +762,31 @@ namespace Sparring
             _outgoing = ZDOID.None;
             _incoming = ZDOID.None;
             ArenaRing.Refresh();
+
+            // The pauses are deliberately kept. This runs whenever there is no body, including
+            // between a death and the respawn, and clearing them then would hand anyone who was
+            // just declined a free way to start again. They expire on their own.
+        }
+
+        /// <summary>Starts the pause before this player and we can exchange another challenge.</summary>
+        private static void Rest(ZDOID other)
+        {
+            if (other.IsNone()) return;
+
+            var now = Lease.Now;
+            _resting[other] = now + RepeatSeconds;
+
+            // A handful of entries at most in normal play; drop the lapsed ones as new ones arrive.
+            if (_resting.Count <= 16) return;
+            foreach (var key in new List<ZDOID>(_resting.Keys))
+            {
+                if (_resting[key] <= now) _resting.Remove(key);
+            }
+        }
+
+        private static bool Resting(ZDOID other)
+        {
+            return _resting.TryGetValue(other, out var until) && Lease.Now < until;
         }
 
         private static string MyName()

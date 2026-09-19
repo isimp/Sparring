@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Sparring
@@ -12,6 +14,35 @@ namespace Sparring
         OutOfRange,
         Died,
         LeaseLapsed,
+
+        /// <summary>A fighter stepped outside the ring after the fight began, which concedes it.</summary>
+        LeftRing,
+    }
+
+    public static class EndReasons
+    {
+        /// <summary>
+        /// Whether a duel ending this way has a winner. These are the endings that restore health,
+        /// show the scorecard and celebrate; the rest simply call the duel off.
+        /// </summary>
+        public static bool Decided(this EndReason reason)
+        {
+            return reason == EndReason.Yielded || reason == EndReason.Forfeited || reason == EndReason.LeftRing;
+        }
+    }
+
+    /// <summary>Why a challenge was turned down without being shown. Sent back to the challenger.</summary>
+    public enum Busy
+    {
+        None,
+        InCombat,
+        PvpOn,
+        CreaturesNear,
+        Occupied,
+        Dueling,
+        Answering,
+        Cooldown,
+        TooFar,
     }
 
     /// <summary>
@@ -27,6 +58,16 @@ namespace Sparring
         private const string Result = "Sparring_Result";
         private const string Announce = "Sparring_Announce";
         private const string Tally = "Sparring_Tally";
+        private const string Refuse = "Sparring_Busy";
+
+        /// <summary>
+        /// Shortest gap between two announcements from the same sender. A duel produces one when
+        /// it ends, and a countdown alone keeps two duels further apart than this, so only a flood
+        /// is cut.
+        /// </summary>
+        private const float AnnounceGap = 3f;
+
+        private static readonly Dictionary<long, float> _lastAnnounce = new Dictionary<long, float>();
 
         /// <summary>
         /// The shape of these messages, bumped whenever one of them changes.
@@ -67,7 +108,9 @@ namespace Sparring
             rpc.Register<ZDOID, int>(Result, OnResult);
             rpc.Register<ZDOID, string, string, int>(Announce, OnAnnounce);
             rpc.Register<ZDOID, float, int, float>(Tally, OnTally);
+            rpc.Register<ZDOID, int>(Refuse, OnBusy);
             _registeredOn = rpc;
+            _lastAnnounce.Clear();
         }
 
         public static void SendChallenge(Player target, float radius)
@@ -98,9 +141,36 @@ namespace Sparring
                 me.GetZDOID(), accepted, terms.Center, terms.Radius, terms.StartAtMs);
         }
 
+        /// <summary>
+        /// A "no" to the other party of a pending challenge, from either side: the challenged
+        /// player declining, or the challenger withdrawing. The receiver tells the two apart by
+        /// which way round the challenge ran.
+        /// </summary>
         public static void SendDecline(ZDOID challenger)
         {
             SendReply(challenger, accepted: false, default(Lease.Terms));
+        }
+
+        /// <summary>
+        /// Turns a challenge down before it is shown, and says why. A new message rather than a
+        /// field on the reply, so the reply keeps its shape; an older build has no handler for it
+        /// and its challenge simply waits out its timer.
+        /// </summary>
+        public static void SendBusy(ZDOID challenger, Busy why)
+        {
+            var me = Player.m_localPlayer;
+            if (me == null) return;
+
+            var peer = Lease.OwnerOf(challenger);
+            if (peer == 0L) return;
+
+            ZRoutedRpc.instance?.InvokeRoutedRPC(peer, Refuse, me.GetZDOID(), (int)why);
+        }
+
+        private static void OnBusy(long sender, ZDOID from, int why)
+        {
+            var reason = Enum.IsDefined(typeof(Busy), why) ? (Busy)why : Busy.Occupied;
+            Duel.ReceiveBusy(from, reason);
         }
 
         public static void SendResult(ZDOID opponent, EndReason reason)
@@ -181,12 +251,18 @@ namespace Sparring
 
         private static void OnAnnounce(long sender, ZDOID winnerId, string winner, string loser, int reason)
         {
+            // An announcement is a broadcast any client can send, and it lands in everyone's chat.
+            // Rate-limited per sender so it cannot be used to flood it.
+            var now = Time.realtimeSinceStartup;
+            if (_lastAnnounce.TryGetValue(sender, out var at) && now - at < AnnounceGap) return;
+            _lastAnnounce[sender] = now;
+
             var why = Clamp(reason);
             Announcer.Show(winner, loser, why);
 
             // Only a duel somebody actually won gets a celebration. Ending because one of them
             // fell down a cliff is not a victory and should not look like one.
-            if (why == EndReason.Yielded || why == EndReason.Forfeited) Victory.Celebrate(winnerId);
+            if (why.Decided()) Victory.Celebrate(winnerId);
         }
 
         /// <summary>
@@ -195,9 +271,7 @@ namespace Sparring
         /// </summary>
         private static EndReason Clamp(int reason)
         {
-            return reason >= 0 && reason <= (int)EndReason.LeaseLapsed
-                ? (EndReason)reason
-                : EndReason.LeaseLapsed;
+            return Enum.IsDefined(typeof(EndReason), reason) ? (EndReason)reason : EndReason.LeaseLapsed;
         }
     }
 }

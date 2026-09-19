@@ -80,6 +80,8 @@ namespace Sparring
                     return $"<color=#d8c38a>{loser} yields to {winner}.</color>";
                 case EndReason.Forfeited:
                     return $"<color=#d8c38a>{loser} forfeits to {winner}.</color>";
+                case EndReason.LeftRing:
+                    return $"<color=#d8c38a>{loser} left the ring and yields to {winner}.</color>";
                 case EndReason.Died:
                     return $"<color=#b9bfc4>The duel between {winner} and {loser} ended — {loser} fell to something else.</color>";
                 case EndReason.OutOfRange:

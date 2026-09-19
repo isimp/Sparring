@@ -99,7 +99,7 @@ namespace Sparring
                 return;
             }
 
-            // Name, health, and nothing else. The ring on the ground already shows where the edge is.
+            // Name, health, and the way out. The ring on the ground already shows where the edge is.
             var foe = Foe();
             if (foe == null)
             {
@@ -112,6 +112,16 @@ namespace Sparring
                 Health(Mathf.Clamp01(foe.GetHealth() / Mathf.Max(1f, foe.GetMaxHealth())));
             }
 
+            YieldHint();
+        }
+
+        /// <summary>
+        /// The key that gives the duel up, under the health bar, and the hold filling beneath it
+        /// once the key is down. Shared with the stand-in panel so the preview shows the same.
+        /// </summary>
+        private static void YieldHint()
+        {
+            Text($"<color=#cdd3d8>Hold [{KeyLabels.Of(Plugin.YieldKey)}] to yield</color>");
             if (Keys.YieldHeld) Bar(Keys.YieldProgress, new Color(0.85f, 0.62f, 0.25f), 6f);
         }
 
@@ -132,6 +142,7 @@ namespace Sparring
                 case FakePanel.Active:
                     Text("Eyvind");
                     Health(Preview.FakeHealth);
+                    YieldHint();
                     break;
             }
         }

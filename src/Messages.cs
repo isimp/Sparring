@@ -19,7 +19,18 @@ namespace Sparring
         public const string PvpOn = "Turn PvP off before dueling — Sparring handles the hits itself.";
         public const string NobodyInView = "Look at the player you want to duel, then use /duel again.";
         public const string CreaturesAbout = "Something hostile is nearby. Clear the ground first.";
+        public const string YouAreBusy = "You cannot start a duel right now.";
         public const string Unreachable = "You cannot reach {0} any more.";
+        public const string WaitBeforeAgain = "Wait a moment before challenging {0} again.";
+        public const string TooFarAway = "{0} is too far away.";
+
+        // The other player is not free
+        public const string TheyBusy = "{0} cannot duel right now.";
+        public const string TheyInCombat = "{0} is in combat.";
+        public const string TheyPvpOn = "{0} has PvP on.";
+        public const string TheyCreaturesAbout = "{0} has something hostile nearby.";
+        public const string TheyDueling = "{0} is already in a duel.";
+        public const string TheyAnswering = "{0} is answering another challenge.";
 
         // Refusals when answering
         public const string NoChallenge = "Nobody has challenged you.";
@@ -34,6 +45,7 @@ namespace Sparring
         public const string YouDeclined = "You decline {0}'s challenge.";
         public const string YouWithdrew = "You withdraw your challenge to {0}.";
         public const string TheyDeclined = "{0} declines your challenge.";
+        public const string TheyWithdrew = "{0} withdrew the challenge.";
 
         // Duels ending
         public const string OutOfRing = "Out of the ring — the duel is off.";
@@ -61,7 +73,16 @@ namespace Sparring
                 PvpOn,
                 NobodyInView,
                 CreaturesAbout,
+                YouAreBusy,
                 string.Format(Unreachable, name),
+                string.Format(WaitBeforeAgain, name),
+                string.Format(TooFarAway, name),
+                string.Format(TheyBusy, name),
+                string.Format(TheyInCombat, name),
+                string.Format(TheyPvpOn, name),
+                string.Format(TheyCreaturesAbout, name),
+                string.Format(TheyDueling, name),
+                string.Format(TheyAnswering, name),
                 NoChallenge,
                 NoneOut,
                 NotDueling,
@@ -72,6 +93,7 @@ namespace Sparring
                 string.Format(YouDeclined, name),
                 string.Format(YouWithdrew, name),
                 string.Format(TheyDeclined, name),
+                string.Format(TheyWithdrew, name),
                 OutOfRing,
                 string.Format(LostTrack, name),
                 NeverDueled,

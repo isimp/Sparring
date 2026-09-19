@@ -6,7 +6,13 @@ Duel state is a lease rather than a flag. Each fighter's own ZDO holds the oppon
 
 Both sides have to name each other with a live lease. A one sided claim grants nothing, and anything unreadable counts as not duelling. Death protection covers only the opponent's hits. No duel damage is enabled until the countdown, which runs on the server's clock, has finished.
 
-A duel can only be started out of combat, using the game's own ten second PvP rule, and with nothing hostile around the ring. Straying outside the ring ends the duel.
+A duel can only be started when both players are free: out of combat by the game's own ten second PvP rule, with PvP off, not sitting, sleeping or otherwise occupied, and with nothing hostile around the ring. Most of that is only known on the player's own machine, so the challenged player's game checks it when the challenge arrives and turns down one it cannot take without showing it, telling the challenger why. The challenged player's game also refuses a challenge from further away than the proposed ring.
+
+Withdrawing a challenge, or walking away from one, clears it on both sides. After an invitation ends without a duel, the same two players cannot exchange another for fifteen seconds. Both sides enforce this, so a declined challenge cannot be repeated as fast as it can be typed.
+
+Leaving the ring after the fight has begun counts as yielding, and the opponent wins. Leaving it during the countdown only calls the duel off.
+
+End of duel announcements are rate limited per sender, since they are a broadcast any client can send.
 
 ## Server rules
 
