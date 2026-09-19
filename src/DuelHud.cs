@@ -42,6 +42,41 @@ namespace Sparring
 
         private static readonly List<Row> _rows = new List<Row>();
 
+        private static bool _warmed;
+
+        /// <summary>
+        /// Pays IMGUI's one-off costs early, where nobody is waiting on a keypress.
+        ///
+        /// The game draws nothing with IMGUI itself, so the first time this panel draws is often the
+        /// first IMGUI text in the session: that loads Unity's built-in skin and its font, and
+        /// rasterises glyphs for every size and weight used. Left alone, all of it lands on the
+        /// frame the first challenge goes out. Measuring a string with every printable character,
+        /// at each size and in bold, fills the font atlas the same way drawing would.
+        /// </summary>
+        public static void Warm()
+        {
+            if (_warmed) return;
+            _warmed = true;
+
+            try
+            {
+                Prepare();
+
+                var every = new System.Text.StringBuilder();
+                for (var c = ' '; c <= '~'; c++) every.Append(c);
+                var sample = every.ToString();
+
+                _label.CalcSize(new GUIContent(sample));
+                _label.CalcSize(new GUIContent("<b>" + sample + "</b>"));
+                _big.CalcSize(new GUIContent(sample));
+                White();
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogDebug($"Sparring HUD warm-up: {ex.Message}");
+            }
+        }
+
         public static void Draw()
         {
             try

@@ -366,6 +366,7 @@ namespace Sparring
 
         private void OnGUI()
         {
+            DuelHud.Warm();
             DuelHud.Draw();
         }
 

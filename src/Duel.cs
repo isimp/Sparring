@@ -36,6 +36,13 @@ namespace Sparring
         private static string _lastFoeName = "";
 
         /// <summary>
+        /// The ring the last duel was fought in, so a rematch is the same fight again. Taken from
+        /// the agreed terms rather than from whatever was typed, so it is the same on both sides
+        /// and a rematch asked for by either fighter proposes the same ring.
+        /// </summary>
+        private static float _lastRadius;
+
+        /// <summary>
         /// How long after an invitation ends without a duel before the same two players can
         /// exchange another. Every shown challenge plays a sound and puts a prompt on screen, so
         /// without a pause a declined challenger could repeat it as fast as they can type.
@@ -539,6 +546,7 @@ namespace Sparring
 
             _lastFoe = opponent;
             _lastFoeName = _opponentName;
+            _lastRadius = terms.Radius;
 
             Lease.SetTerms(me, terms);
             Lease.Stamp(me, opponent);
@@ -746,7 +754,7 @@ namespace Sparring
             {
                 if (player != null && player.GetZDOID() == _lastFoe)
                 {
-                    Challenge(player, Plugin.ArenaRadius);
+                    Challenge(player, _lastRadius > 0f ? _lastRadius : Plugin.ArenaRadius);
                     return;
                 }
             }
