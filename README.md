@@ -2,9 +2,11 @@
 
 Duel another player without either of you dying.
 
-Look at another player and type /duel in chat. They get a prompt and press Y to accept or N to decline. A ring is marked out on the ground, a short countdown runs, and the fight begins. Whoever runs out of health yields instead of dying. When the duel ends, both fighters get some health back and their harmful effects are cleared, and a card shows damage dealt and taken, hits and how long it lasted. Hold Backspace to give up.
+Look at another player and type /duel in chat. They get a prompt that shows which keys accept and decline the challenge. A ring is marked out on the ground, a short countdown runs, and the fight begins. Whoever runs out of health yields instead of dying. When the duel ends, both fighters get some health back and their harmful effects are cleared, and a card shows damage dealt and taken, hits and how long it lasted. Hold Backspace to give up.
 
 Only your opponent's hits are made safe. Creatures, falls and drowning can still kill you. While the duel lasts, creatures ignore both fighters unless you attack them. Leaving the ring ends the duel, and a disconnect or crash ends every protection on its own within a few seconds.
+
+![A Sparring duel in progress](https://raw.githubusercontent.com/isimp/Sparring/main/docs/images/screenshot.webp)
 
 ## AI notice
 
