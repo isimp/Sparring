@@ -157,7 +157,7 @@ namespace Sparring
             // it, not to open a second one.
             if (Duel.HasInvite)
             {
-                Duel.Say($"You have a challenge waiting — press [{Plugin.AcceptKey}] to accept, [{Plugin.DeclineKey}] to decline.");
+                Duel.Say($"You have a challenge waiting — press [{KeyLabels.Of(Plugin.AcceptKey)}] to accept, [{KeyLabels.Of(Plugin.DeclineKey)}] to decline.");
                 return;
             }
 

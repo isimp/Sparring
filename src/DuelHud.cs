@@ -189,7 +189,7 @@ namespace Sparring
         private static void Invite(string who, int seconds)
         {
             Text($"<b>{who}</b> challenges you", _big);
-            Text($"[{Plugin.AcceptKey}] Accept     [{Plugin.DeclineKey}] Decline     {seconds}s");
+            Text($"[{KeyLabels.Of(Plugin.AcceptKey)}] Accept     [{KeyLabels.Of(Plugin.DeclineKey)}] Decline     {seconds}s");
         }
 
         private static void Waiting(string who, int seconds)
