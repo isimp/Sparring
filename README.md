@@ -6,6 +6,10 @@ Look at another player and type /duel in chat. They get a prompt and press Y to 
 
 Only your opponent's hits are made safe. Creatures, falls and drowning can still kill you. While the duel lasts, creatures ignore both fighters unless you attack them. Leaving the ring ends the duel, and a disconnect or crash ends every protection on its own within a few seconds.
 
+## AI notice
+
+Most of Sparring was written by Claude Code (Anthropic), which did the heavy lifting on implementation and design. Heads-up so you can judge for yourself.
+
 ## Commands
 
 Add a number to /duel to set the ring size in metres. /duel rematch challenges your last opponent, /duel preview draws a ring where you stand, and /duel status shows what is going on. Accepting, declining and yielding also work from chat with /duel accept, /duel decline and /duel yield.
