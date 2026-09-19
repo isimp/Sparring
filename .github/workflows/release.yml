@@ -33,7 +33,7 @@ on:
       thunderstore_categories:
         description: "Thunderstore category slugs, comma separated (keep ai-generated)"
         required: false
-        default: "ai-generated,mods,pvp,client-side,server-side"
+        default: "ai-generated,mods,pvp,tweaks,client-side,server-side,deep-north-update"
 
 env:
   # Thunderstore packages list BepInEx so mod managers install it; Hexium assumes it and

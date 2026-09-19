@@ -61,7 +61,7 @@ It can also be run by hand:
 
 ```bash
 HEXIUM_TOKEN=... python3 tools/publish.py dist/hexium/Sparring-0.1.0.zip --store hexium --team isimp --categories "PvP,Combat,Mechanics,Open Source,Valheim 1.0"
-THUNDERSTORE_TOKEN=... python3 tools/publish.py dist/thunderstore/Sparring-0.1.0.zip --store thunderstore --team isimp --categories "ai-generated,mods,pvp,client-side,server-side"
+THUNDERSTORE_TOKEN=... python3 tools/publish.py dist/thunderstore/Sparring-0.1.0.zip --store thunderstore --team isimp --categories "ai-generated,mods,pvp,tweaks,client-side,server-side,deep-north-update"
 python3 tools/publish.py dist/hexium/Sparring-0.1.0.zip --check-only   # validate only
 ```
 
