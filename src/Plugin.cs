@@ -198,9 +198,9 @@ namespace Sparring
             _sync.AddLockingConfigEntry(_lockConfig);
 
             _debugCommands = Rule("2 - Rules", "DebugCommands", false,
-                "Enables the rehearsal and tuning commands: /duel practice, hit, spar, panels, testwin, " +
-                "testyield, testmessages, testannounce, testsound, sounds, playsound and prefabs. Off by " +
-                "default because several of them restore health. /duel preview is always available.");
+                "Enables the rehearsal and tuning commands: /duel practice, hit, burn, poison, spar, panels, " +
+                "testwin, testyield, testmessages, testannounce, testsound, sounds, playsound and prefabs. " +
+                "Off by default because several of them restore health. /duel preview is always available.");
 
             _neutralToCreatures = Rule("2 - Rules", "NeutralToCreatures", true,
                 "Creatures ignore both fighters for the length of a duel. Players near the duel need Sparring for " +

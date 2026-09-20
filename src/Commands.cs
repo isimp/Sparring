@@ -95,6 +95,16 @@ namespace Sparring
                     break;
                 }
 
+                // Fire and poison do not land with the blow that carried them, so they need their
+                // own way in: these hand the damage to the effects that tick it out.
+                case "burn":
+                    if (Debugging()) Duel.SelfBurn(Amount(args, 60f));
+                    break;
+
+                case "poison":
+                    if (Debugging()) Duel.SelfPoison(Amount(args, 60f));
+                    break;
+
                 case "testyield":
                     if (Debugging()) Preview.Yield();
                     break;
@@ -158,6 +168,14 @@ namespace Sparring
         /// preference: <c>testwin</c> hands out health and clears what a fight left on you, so
         /// whether it is available is the server's business, not each player's.
         /// </summary>
+        /// <summary>The number after a subcommand, or the given default if there is none.</summary>
+        private static float Amount(Terminal.ConsoleEventArgs args, float fallback)
+        {
+            return args.Length > 2 && float.TryParse(args[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var given)
+                ? given
+                : fallback;
+        }
+
         private static bool Debugging()
         {
             if (Plugin.DebugCommands) return true;

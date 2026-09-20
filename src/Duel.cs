@@ -840,6 +840,66 @@ namespace Sparring
         }
 
         /// <summary>
+        /// Sets this player alight, the way an opponent's fire arrow does.
+        ///
+        /// Not a hit: it hands the damage to the game's own burning effect, which is what turns it
+        /// into ticks. Those ticks are built by the effect with nobody named on them, so this is
+        /// the real article rather than an imitation of one — the same thing that has to be read as
+        /// the opponent's doing for a duel to survive it.
+        ///
+        /// Take enough damage first and the burn will be what finishes you, which is the case worth
+        /// watching: it should end in a yield.
+        /// </summary>
+        public static void SelfBurn(float amount)
+        {
+            var seman = Kindling(out var me);
+            if (seman == null) return;
+
+            var burning = seman.GetStatusEffect(SEMan.s_statusEffectBurning) as SE_Burning
+                          ?? seman.AddStatusEffect(SEMan.s_statusEffectBurning, false, 0, 0f, -1) as SE_Burning;
+
+            if (burning == null) { Say("The burning effect is not available here."); return; }
+
+            if (!burning.AddFireDamage(Mathf.Clamp(amount, 1f, 1000f)))
+            {
+                // Too little to spread over the effect's lifetime, which the game answers by
+                // dropping the effect rather than leaving a burn that does nothing.
+                seman.RemoveStatusEffect(burning, quiet: true);
+                Say("Not enough to catch. Try a larger number.");
+                return;
+            }
+
+            Say($"Alight for {Mathf.RoundToInt(amount)} over time.");
+        }
+
+        /// <summary>The same for poison, which the game carries in its own effect.</summary>
+        public static void SelfPoison(float amount)
+        {
+            var seman = Kindling(out var me);
+            if (seman == null) return;
+
+            var poison = seman.GetStatusEffect(SEMan.s_statusEffectPoison) as SE_Poison
+                         ?? seman.AddStatusEffect(SEMan.s_statusEffectPoison, false, 0, 0f, -1) as SE_Poison;
+
+            if (poison == null) { Say("The poison effect is not available here."); return; }
+
+            // Only a dose larger than whatever is already running takes hold.
+            poison.AddDamage(Mathf.Clamp(amount, 1f, 1000f));
+            Say($"Poisoned for {Mathf.RoundToInt(amount)} over time.");
+        }
+
+        /// <summary>The checks both of the above share, and the effect manager they need.</summary>
+        private static SEMan Kindling(out Player me)
+        {
+            me = Player.m_localPlayer;
+            if (me == null) return null;
+
+            if (!Practising) { Say("Only during a practice duel. Start one with /duel practice."); return null; }
+
+            return me.GetSEMan();
+        }
+
+        /// <summary>
         /// A duel against nobody, for testing the parts that do not need a second player.
         ///
         /// Everything local runs for real: the ring, the panel, the countdown, the tally, the
