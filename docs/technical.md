@@ -30,7 +30,7 @@ The ring is built on each client from the centre and radius already carried in t
 
 ## Limits
 
-Everyone near a duel needs the mod for creatures to ignore the fighters, because a creature is controlled by whichever client owns it. Valheim is client authoritative, so a player who edits their own game can make themselves unkillable with or without this mod. Status effects added by other mods are not cleared unless listed in `AlsoClear`. If none of the shaders the ring can use are available, no ring is drawn, and the duel still ends when a fighter leaves the arena.
+Creatures take no notice of a duel and fight both sides as usual, so a duel is only as safe as the ground it is fought on. Valheim is client authoritative, so a player who edits their own game can make themselves unkillable with or without this mod. Status effects added by other mods are not cleared unless listed in `AlsoClear`. If none of the shaders the ring can use are available, no ring is drawn, and the duel still ends when a fighter leaves the arena.
 
 ## Rehearsal commands
 

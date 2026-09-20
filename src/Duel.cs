@@ -66,9 +66,8 @@ namespace Sparring
         public static ZDOID Opponent => _opponent;
 
         /// <summary>
-        /// Whether this duel is the solo one. Two things read it: the tally, which has no opponent
-        /// to attribute blows to, and creature neutrality, which is suspended so that there is
-        /// something willing to hit you.
+        /// Whether this duel is the solo one. Read by the tally, which has no opponent to
+        /// attribute blows to and so counts whatever lands.
         /// </summary>
         public static bool Practising { get; private set; }
         public static string OpponentName => _opponentName;
@@ -906,10 +905,9 @@ namespace Sparring
         /// ending, the card, the healing. The lease names this player as their own opponent, which
         /// is the only way to pair alone, and is why that is allowed only here.
         ///
-        /// Two things differ. Creature neutrality is suspended, because a tally needs something
-        /// willing to hit you, and nothing shields you from a killing blow, so this is as dangerous
-        /// as standing there normally. Nothing that needs two machines is covered: neither the
-        /// handshake nor the order the ending messages arrive in.
+        /// Nothing shields you from a creature's killing blow, so this is as dangerous as standing
+        /// there normally, and nothing that needs two machines is covered: neither the handshake
+        /// nor the order the ending messages arrive in.
         /// </summary>
         public static void Practice()
         {
@@ -929,8 +927,7 @@ namespace Sparring
             };
 
             BeginWith(me.GetZDOID(), "Practice", terms);
-            Say("Practice duel. Creatures will still fight you, and can still kill you. " +
-                "Take a few hits, then yield or step out of the ring.");
+            Say("Practice duel. Take a few hits, then yield or step out of the ring.");
         }
 
         /// <summary>Re-challenge whoever you last fought, if they are still around.</summary>

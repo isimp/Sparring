@@ -62,7 +62,7 @@ namespace Sparring
 
             _sparring = !_sparring;
             Duel.Say(_sparring
-                ? "Rehearsing a duel. Buildings, creatures and skills behave as if you were in one."
+                ? "Rehearsing a duel. Buildings and skills behave as if you were in one."
                 : "Rehearsal over.");
         }
 

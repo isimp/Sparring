@@ -5,10 +5,10 @@
     <AssemblyName>Sparring</AssemblyName>
     <RootNamespace>Sparring</RootNamespace>
     <LangVersion>latest</LangVersion>
-    <Version>0.1.1</Version>
+    <Version>0.2.0</Version>
     <Authors>isimp</Authors>
     <Product>Sparring</Product>
-    <Description>Duel another player without either of you dying, and be left alone by the wildlife while you do it.</Description>
+    <Description>Duel another player without either of you dying. Yield instead of falling, then both of you get back up.</Description>
     <Copyright>Copyright (c) 2026 isimp</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>

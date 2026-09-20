@@ -4,7 +4,7 @@ Duel another player without either of you dying.
 
 Look at another player and type /duel in chat. They get a prompt that shows which keys accept and decline the challenge, unless they are in combat, have PvP on or are otherwise busy, in which case you are told why. A ring is marked out on the ground, a short countdown runs, and the fight begins. Whoever runs out of health yields instead of dying. When the duel ends, both fighters get some health back and their harmful effects are cleared, and a card shows damage dealt and taken, hits and how long it lasted. Hold Backspace to give up.
 
-Only your opponent's hits are made safe. Creatures, falls and drowning can still kill you. While the duel lasts, creatures ignore both fighters unless you attack them. Leaving the ring once the fight has begun counts as yielding, and a disconnect or crash ends every protection on its own within a few seconds.
+Only your opponent's hits are made safe, including the fire and poison they leave on you. Creatures, falls and drowning can still kill you, and a duel cannot be started with anything hostile around the ring. Leaving the ring once the fight has begun counts as yielding, and a disconnect or crash ends every protection on its own within a few seconds.
 
 ![A Sparring duel in progress](https://raw.githubusercontent.com/isimp/Sparring/main/docs/images/screenshot.webp)
 
@@ -18,7 +18,7 @@ Add a number to /duel to set the ring size in metres. /duel rematch challenges y
 
 ## Multiplayer
 
-Both fighters need Sparring. Players standing nearby need it too for creatures to leave the fighters alone. On a server running Sparring, the server's duel rules apply to everyone, while keys and display options stay your own. Players without the mod can still join.
+Both fighters need Sparring. Nobody else does. On a server running Sparring, the server's duel rules apply to everyone, while keys and display options stay your own. Players without the mod can still join.
 
 ## Settings
 

@@ -42,7 +42,7 @@ The two stores have different category lists. Hexium takes category names, Thund
 
 ## Install location and compatibility
 
-Sparring is client-side. Players near a duel need it as well for creatures to ignore the fighters, which is worth stating on the mod pages.
+Sparring is client-side, and only the two fighters need it, which is worth stating on the mod pages.
 
 `Link.ProtocolSince` in `src/Link.cs` is the oldest version a server running Sparring admits. Raise it, together with `Link.Protocol`, only when the messages between clients change.
 

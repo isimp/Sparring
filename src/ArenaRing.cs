@@ -48,8 +48,7 @@ namespace Sparring
 
         /// <summary>
         /// Draws a ring around every duel in sight, not only your own. Needs no network traffic of
-        /// its own: the centre and radius are already on both fighters' ZDOs, and this is the same
-        /// scan <see cref="Neutrality"/> runs over the same data.
+        /// its own: the centre and radius are already on both fighters' ZDOs.
         /// </summary>
         public static void Sync()
         {

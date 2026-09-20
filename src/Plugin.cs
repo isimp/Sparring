@@ -9,14 +9,13 @@ using UnityEngine;
 
 namespace Sparring
 {
-    [BepInPlugin(Guid, "Sparring", "0.1.1")]
+    [BepInPlugin(Guid, "Sparring", "0.2.0")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "isimp.Sparring";
 
         public static ManualLogSource Log;
 
-        private static ConfigEntry<bool> _neutralToCreatures;
         private static ConfigEntry<bool> _requireOutOfCombat;
         private static ConfigEntry<bool> _requireClearGround;
         private static ConfigEntry<bool> _refusePvpBypass;
@@ -56,7 +55,6 @@ namespace Sparring
         private static readonly HashSet<string> _alsoClearSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private static Color _ring = new Color(0.85f, 0.72f, 0.35f, 0.85f);
 
-        public static bool NeutralToCreatures => _neutralToCreatures?.Value ?? true;
         public static bool RequireOutOfCombat => _requireOutOfCombat?.Value ?? true;
         public static bool RequireClearGround => _requireClearGround?.Value ?? true;
         public static bool RefusePvpBypass => _refusePvpBypass?.Value ?? true;
@@ -202,10 +200,6 @@ namespace Sparring
                 "testwin, testyield, testmessages, testannounce, testsound, sounds, playsound and prefabs. " +
                 "Off by default because several of them restore health. /duel preview is always available.");
 
-            _neutralToCreatures = Rule("2 - Rules", "NeutralToCreatures", true,
-                "Creatures ignore both fighters for the length of a duel. Players near the duel need Sparring for " +
-                "this to hold, because a creature is controlled by whichever client owns it. Attacking a creature " +
-                "makes it target you again.");
             _requireClearGround = Rule("2 - Rules", "RequireClearGround", true,
                 "A duel can only be started with nothing hostile around the ring. Tames and dvergr do not count.");
             _requireOutOfCombat = Rule("2 - Rules", "RequireOutOfCombat", true,
@@ -312,7 +306,6 @@ namespace Sparring
             RebuildRingColor();
             _alsoClear.SettingChanged += (s, e) => RebuildAlsoClear();
             _ringColor.SettingChanged += (s, e) => RebuildRingColor();
-            _neutralToCreatures.SettingChanged += (s, e) => { if (!NeutralToCreatures) Neutrality.ReleaseAll(); };
             _showRing.SettingChanged += (s, e) => { if (!ShowArenaRing) { ArenaRing.HideAll(); ArenaRing.HidePreview(); } };
             _ringMarker.SettingChanged += (s, e) => ArenaRing.ForgetPrefabs();
             _centreMarker.SettingChanged += (s, e) => ArenaRing.ForgetPrefabs();
@@ -335,7 +328,6 @@ namespace Sparring
                 ArenaRing.HidePreview();
                 Victory.Stop();
                 Scorecard.Stop();
-                Neutrality.ReleaseAll();
                 if (Duel.Active) Duel.EndLocal(EndReason.LeaseLapsed, notify: true);
             }
             catch (Exception ex)
@@ -352,7 +344,6 @@ namespace Sparring
             {
                 Duel.Tick();
                 Keys.Tick();
-                Neutrality.Tick();
                 Preview.Tick();
                 ArenaRing.Sync();
                 Victory.Tick();

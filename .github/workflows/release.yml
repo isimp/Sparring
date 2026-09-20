@@ -163,7 +163,7 @@ jobs:
 
             Install: drop `Sparring.dll` into `BepInEx/plugins`, or install the zip with a mod manager.
 
-            Requires BepInEx 5. Both duellists need Sparring, and players near a duel need it too for creatures to ignore the fighters.
+            Requires BepInEx 5. Both duellists need Sparring; nobody else does.
 
             Look at another player and type /duel to start.
           files: |
