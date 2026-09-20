@@ -34,6 +34,12 @@ namespace Sparring
         /// </summary>
         public const double RenewSeconds = 1.0;
 
+        /// <summary>
+        /// Whether a lease may name its holder as its own opponent. Off except during a practice
+        /// duel, which is the only case where there is nobody else to name.
+        /// </summary>
+        public static bool AllowSelfPair;
+
         /// <summary>Server time, or 0 before we are connected — which reads as "every lease expired".</summary>
         public static double Now => ZNet.instance != null ? ZNet.instance.GetTimeSeconds() : 0.0;
 
@@ -146,6 +152,11 @@ namespace Sparring
             opponentId = ZDOID.None;
             if (mine == null || ZDOMan.instance == null) return false;
             if (!Live(mine, out var claimed)) return false;
+
+            // A lease naming its own holder agrees with itself, which would let a single client
+            // grant itself everything a duel grants. Only the practice duel, which has nobody else
+            // to pair with, is allowed to do it.
+            if (claimed == mine.m_uid && !AllowSelfPair) return false;
 
             var theirs = ZDOMan.instance.GetZDO(claimed);
             if (theirs == null) return false;

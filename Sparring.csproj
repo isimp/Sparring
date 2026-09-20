@@ -5,7 +5,7 @@
     <AssemblyName>Sparring</AssemblyName>
     <RootNamespace>Sparring</RootNamespace>
     <LangVersion>latest</LangVersion>
-    <Version>0.1.0</Version>
+    <Version>0.1.1</Version>
     <Authors>isimp</Authors>
     <Product>Sparring</Product>
     <Description>Duel another player without either of you dying, and be left alone by the wildlife while you do it.</Description>

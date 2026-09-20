@@ -47,7 +47,11 @@ namespace Sparring
             {
                 if (player == null) continue;
 
-                var shielded = Preview.Rehearsing(player) || Lease.Corroborated(player, out _);
+                // A practice duel is deliberately left unshielded: it is fought alone, so creatures
+                // are the only thing that can put a blow on the card.
+                var practising = Duel.Practising && player == Player.m_localPlayer;
+
+                var shielded = !practising && (Preview.Rehearsing(player) || Lease.Corroborated(player, out _));
                 var holding = _held.ContainsKey(player);
 
                 if (shielded && !holding)

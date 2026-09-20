@@ -1,6 +1,6 @@
 {
   "name": "Sparring",
-  "version_number": "0.1.0",
+  "version_number": "0.1.1",
   "website_url": "https://github.com/isimp/Sparring",
   "description": "Duel another player without either of you dying. Creatures leave both fighters alone while the duel lasts.",
   "dependencies": []

@@ -18,16 +18,14 @@ namespace Sparring
     /// is decided on the victim's machine: <c>ApplyDamage</c> runs armour, resistances and the
     /// difficulty scale over it, so the attacker's number is not the damage that landed.
     ///
-    /// The count comes off <c>Character.m_onDamaged</c>, a public delegate the game fires with the
-    /// final applied amount and the attacker. No patch, and nothing to keep in step with the damage
-    /// path if it ever changes.
+    /// The amount counted is always the game's own figure rather than one worked out here, so
+    /// nothing in this file has to be kept in step with how damage is calculated. It arrives from
+    /// <see cref="Patches.ApplyDamageFinalizer"/>, which is where a blow is heard about.
     /// </summary>
     public static class Scorecard
     {
         private const float ShowSeconds = 8f;
 
-        private static Player _watching;
-        private static Action<float, Character> _handler;
         private static double _startedAt;
         private static float _showUntil;
 
@@ -65,7 +63,6 @@ namespace Sparring
             Against = opponent;
             _startedAt = Lease.Now;
             _showUntil = 0f;
-            Watch();
         }
 
         /// <summary>
@@ -74,8 +71,6 @@ namespace Sparring
         /// </summary>
         public static void End(bool show)
         {
-            Unwatch();
-
             var begun = Duel.Terms.StartAtMs > 0L ? Duel.Terms.StartAtMs / 1000.0 : _startedAt;
             Seconds = (float)Math.Max(0.0, Lease.Now - begun);
 
@@ -98,41 +93,16 @@ namespace Sparring
         }
 
         /// <summary>
-        /// Keeps the subscription on whatever body we are currently in. A player object can be
-        /// replaced under us, and a delegate left on the old one would quietly stop counting.
+        /// Records a blow that landed on us. Called for every hit the local player takes while a
+        /// duel is on, and decides here whether it belongs on the card.
         /// </summary>
-        public static void Tick()
+        public static void Count(float amount, Character attacker)
         {
-            if (!Duel.Active) return;
-            if (ReferenceEquals(_watching, Player.m_localPlayer)) return;
+            if (amount <= 0f || attacker == null || !Duel.Active) return;
 
-            Unwatch();
-            Watch();
-        }
-
-        private static void Watch()
-        {
-            var me = Player.m_localPlayer;
-            if (me == null) return;
-
-            _handler = OnDamaged;
-            me.m_onDamaged += _handler;
-            _watching = me;
-        }
-
-        private static void Unwatch()
-        {
-            if (_watching != null && _handler != null) _watching.m_onDamaged -= _handler;
-            _watching = null;
-            _handler = null;
-        }
-
-        private static void OnDamaged(float amount, Character attacker)
-        {
-            if (amount <= 0f || attacker == null) return;
-
-            // Only the opponent's blows count; damage from anything else is ignored.
-            if (!Duel.Active || attacker.GetZDOID() != Duel.Opponent) return;
+            // Only the opponent's blows count; damage from anything else is ignored. A practice
+            // duel has no opponent but itself, so there everything that lands counts instead.
+            if (!Duel.Practising && attacker.GetZDOID() != Duel.Opponent) return;
 
             TookTotal += amount;
             TookHits++;
@@ -162,9 +132,9 @@ namespace Sparring
             Seconds = 0f;
         }
 
+        /// <summary>Takes the card off the screen.</summary>
         public static void Stop()
         {
-            Unwatch();
             _showUntil = 0f;
         }
     }

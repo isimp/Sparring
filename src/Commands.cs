@@ -80,6 +80,21 @@ namespace Sparring
                     if (Debugging()) Preview.ShowPanels();
                     break;
 
+                // Unlike the rehearsals above, this one is a real duel: it runs the whole
+                // lifecycle against yourself, so what it shows is what the code actually does.
+                case "practice":
+                    if (Debugging()) Duel.Practice();
+                    break;
+
+                case "hit":
+                {
+                    var amount = args.Length > 2 && float.TryParse(args[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var d)
+                        ? d
+                        : 10f;
+                    if (Debugging()) Duel.SelfHit(amount);
+                    break;
+                }
+
                 case "testyield":
                     if (Debugging()) Preview.Yield();
                     break;

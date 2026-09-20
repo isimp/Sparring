@@ -44,6 +44,65 @@ namespace Sparring
         }
 
         /// <summary>
+        /// Notes the health we had before a blow is worked out, so the finalizer below can tell
+        /// whether one actually landed. Only our own skin is measured; every other character in
+        /// the world leaves on the first test, which matters because this runs for all of them.
+        /// </summary>
+        [HarmonyPrefix]
+        [HarmonyPatch(typeof(Character), nameof(Character.ApplyDamage))]
+        public static void ApplyDamagePrefix(Character __instance, ref float __state)
+        {
+            __state = -1f;
+
+            try
+            {
+                if (__instance != null && __instance == Player.m_localPlayer) __state = __instance.GetHealth();
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogDebug($"Sparring could not read health before a hit: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Where the scorecard hears about a blow.
+        ///
+        /// <c>ApplyDamage</c> finishes by invoking <c>Character.m_onDamaged</c> with the final
+        /// amount, which is the obvious thing to listen to. It is also the very last statement of a
+        /// long method, and several of the calls before it are ones other mods patch. Anything that
+        /// throws in between takes the callback with it, and a tally that hears nothing records
+        /// nothing and says so by showing no card at all — a silent failure with no way to tell it
+        /// apart from a duel in which nobody landed a hit.
+        ///
+        /// A finalizer runs however the method ended, so the blow is still heard. The exception is
+        /// left exactly as it was: this only listens, and a fault that belongs to somebody else
+        /// stays theirs to fix.
+        ///
+        /// The amount counted is the game's own. By this point the hit has been scaled by the local
+        /// damage rate, so the HitData carries the figure that was applied, and nothing here has to
+        /// repeat the calculation. Health before and after is the proof that it landed: a hit the
+        /// method refused, or one an exception cut short before the health was written, changed
+        /// nothing and is counted as nothing.
+        /// </summary>
+        [HarmonyFinalizer]
+        [HarmonyPatch(typeof(Character), nameof(Character.ApplyDamage))]
+        public static void ApplyDamageFinalizer(Character __instance, HitData hit, float __state)
+        {
+            try
+            {
+                if (__state < 0f || hit == null) return;
+                if (__instance == null || __instance != Player.m_localPlayer) return;
+                if (__instance.GetHealth() >= __state) return;
+
+                Scorecard.Count(hit.GetTotalDamage(), hit.GetAttacker());
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogDebug($"Sparring could not tally a hit: {ex.Message}");
+            }
+        }
+
+        /// <summary>
         /// Lets duel swings through without either fighter turning vanilla PvP on.
         ///
         /// A player's attack filters its targets at <c>Attack.cs:1139</c> and skips other players

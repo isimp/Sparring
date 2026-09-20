@@ -22,6 +22,12 @@ namespace Sparring
         private static double _pairDeadline;
         private static double _nextRenew;
 
+        /// <summary>When the agreed pairing was first found missing, or zero while it holds.</summary>
+        private static double _unpairedSince;
+
+        /// <summary>How long to wait for a result to explain a pairing that has gone.</summary>
+        private const double UnpairedGrace = 2.0;
+
         private static ZDOID _outgoing = ZDOID.None;
         private static string _outgoingName = "";
         private static double _outgoingUntil;
@@ -58,6 +64,13 @@ namespace Sparring
 
         public static bool Active => !_opponent.IsNone();
         public static ZDOID Opponent => _opponent;
+
+        /// <summary>
+        /// Whether this duel is the solo one. Two things read it: the tally, which has no opponent
+        /// to attribute blows to, and creature neutrality, which is suspended so that there is
+        /// something willing to hit you.
+        /// </summary>
+        public static bool Practising { get; private set; }
         public static string OpponentName => _opponentName;
         public static bool HasInvite => !_incoming.IsNone();
         public static bool HasOutgoing => !_outgoing.IsNone();
@@ -185,14 +198,23 @@ namespace Sparring
             if (paired)
             {
                 _everPaired = true;
+                _unpairedSince = 0.0;
             }
             else
             {
                 // Right after a handshake the other side's stamp may not have reached us yet, so
-                // allow a short window to line up. Once we have seen the pair agree even once,
-                // losing it means the duel is genuinely over.
-                if (_everPaired || now > _pairDeadline) return false;
-                return true;
+                // allow a short window to line up.
+                if (!_everPaired) return now <= _pairDeadline;
+
+                // The pairing has gone after being agreed, which means the duel is over, but not
+                // why. The other side drops its lease as part of ending, and a result explaining
+                // the ending is on its way; waiting briefly lets it arrive and name a winner
+                // rather than recording a duel that merely lost track of itself.
+                //
+                // This holds no protection open. Everything protective reads the lease directly,
+                // so it has already stopped; only this bookkeeping waits.
+                if (_unpairedSince <= 0.0) _unpairedSince = now;
+                return now - _unpairedSince < UnpairedGrace;
             }
 
             // Our own position first. It is the one thing this client knows for certain, and a
@@ -541,6 +563,7 @@ namespace Sparring
             _opponentName = string.IsNullOrEmpty(name) ? "your opponent" : Clean(name);
             _terms = terms;
             _everPaired = false;
+            _unpairedSince = 0.0;
             _pairDeadline = Lease.Now + Plugin.PairGraceSeconds;
             _nextRenew = 0.0;
 
@@ -706,17 +729,24 @@ namespace Sparring
             _opponent = ZDOID.None;
             _opponentName = "";
             _everPaired = false;
+            _unpairedSince = 0.0;
             _terms = default(Lease.Terms);
 
             ArenaRing.Refresh();
+            Practising = false;
+            Lease.AllowSelfPair = false;
+
+            // Before the lease goes, not after. Dropping the lease is itself what tells the other
+            // side the duel is over, and it says nothing about why: if it reaches them first their
+            // own tick ends the duel as a lapsed pairing, which has no winner, so the result is
+            // sent first and arrives first.
+            if (notify && !opponent.IsNone()) Link.SendResult(opponent, reason);
 
             if (me != null)
             {
                 Lease.Clear(me);
                 Recovery.Settle(me);
             }
-
-            if (notify && !opponent.IsNone()) Link.SendResult(opponent, reason);
 
             // Ends nobody won get their own word here; one somebody won is announced to everyone
             // by the side that lost, so those say nothing extra on this screen.
@@ -740,6 +770,78 @@ namespace Sparring
 
             var attacker = Patches.LastAttacker(me);
             return attacker != null && attacker.GetZDOID() == _opponent;
+        }
+
+        /// <summary>
+        /// Lands a real blow on yourself, so a practice card can be filled without waiting for
+        /// something to wander past and take an interest.
+        ///
+        /// It goes through <c>ApplyDamage</c>, which is where the game subtracts the health and
+        /// fires the callback the tally listens on, so what lands is a genuine hit rather than a
+        /// number written into the card. Armour and resistances are not applied — those happen in
+        /// <c>Damage</c>, further up — so the amount asked for is close to the amount that lands.
+        ///
+        /// A lethal one is worth trying: the hit is recorded as coming from your opponent, which in
+        /// a practice duel is you, so it takes the same route a fatal blow takes in a real duel and
+        /// should come out as a yield rather than a death.
+        /// </summary>
+        public static void SelfHit(float amount)
+        {
+            var me = Player.m_localPlayer;
+            if (me == null) return;
+
+            if (!Practising) { Say("Only during a practice duel. Start one with /duel practice."); return; }
+
+            var hit = new HitData();
+            hit.m_damage.m_blunt = Mathf.Clamp(amount, 1f, 1000f);
+            hit.m_point = me.GetCenterPoint();
+            hit.m_dir = me.transform.forward;
+            hit.SetAttacker(me);
+
+            // The damage path is one other mods patch heavily, and a throw from any of them would
+            // otherwise leave the chat window stuck on the command that caused it.
+            try
+            {
+                me.ApplyDamage(hit, showDamageText: true, triggerEffects: true);
+            }
+            catch (Exception ex)
+            {
+                Plugin.Log.LogWarning($"Sparring took a hit but something in the damage path threw: {ex}");
+            }
+        }
+
+        /// <summary>
+        /// A duel against nobody, for testing the parts that do not need a second player.
+        ///
+        /// Everything local runs for real: the ring, the panel, the countdown, the tally, the
+        /// ending, the card, the healing. The lease names this player as their own opponent, which
+        /// is the only way to pair alone, and is why that is allowed only here.
+        ///
+        /// Two things differ. Creature neutrality is suspended, because a tally needs something
+        /// willing to hit you, and nothing shields you from a killing blow, so this is as dangerous
+        /// as standing there normally. Nothing that needs two machines is covered: neither the
+        /// handshake nor the order the ending messages arrive in.
+        /// </summary>
+        public static void Practice()
+        {
+            var me = Player.m_localPlayer;
+            if (me == null) return;
+
+            if (Active) { Say(string.Format(Messages.AlreadyDueling, _opponentName)); return; }
+
+            Practising = true;
+            Lease.AllowSelfPair = true;
+
+            var terms = new Lease.Terms
+            {
+                Center = me.transform.position,
+                Radius = Plugin.ArenaRadius,
+                StartAtMs = (long)((Lease.Now + Plugin.CountdownSeconds) * 1000.0),
+            };
+
+            BeginWith(me.GetZDOID(), "Practice", terms);
+            Say("Practice duel. Creatures will still fight you, and can still kill you. " +
+                "Take a few hits, then yield or step out of the ring.");
         }
 
         /// <summary>Re-challenge whoever you last fought, if they are still around.</summary>
@@ -766,6 +868,7 @@ namespace Sparring
             _opponent = ZDOID.None;
             _opponentName = "";
             _everPaired = false;
+            _unpairedSince = 0.0;
             _terms = default(Lease.Terms);
             _outgoing = ZDOID.None;
             _incoming = ZDOID.None;
