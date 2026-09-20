@@ -4,7 +4,7 @@
 
 Duel state is a lease rather than a flag. Each fighter's own ZDO holds the opponent and an expiry in server time, renewed every second and valid for five. A disconnect, a crash or an error simply stops the renewal, and every protection switches itself off. Nothing needs cleaning up.
 
-Both sides have to name each other with a live lease. A one sided claim grants nothing, and anything unreadable counts as not duelling. Death protection covers only the opponent's hits. No duel damage is enabled until the countdown, which runs on the server's clock, has finished.
+Both sides have to name each other with a live lease. A one sided claim grants nothing, and anything unreadable counts as not duelling. Death protection covers only the opponent's hits, and the fire and poison they leave behind, which arrive later as damage over time with nobody named on them. No duel damage is enabled until the countdown, which runs on the server's clock, has finished.
 
 A duel can only be started when both players are free: out of combat by the game's own ten second PvP rule, with PvP off, not sitting, sleeping or otherwise occupied, and with nothing hostile around the ring. Most of that is only known on the player's own machine, so the challenged player's game checks it when the challenge arrives and turns down one it cannot take without showing it, telling the challenger why. The challenged player's game also refuses a challenge from further away than the proposed ring.
 
@@ -35,6 +35,8 @@ Creatures take no notice of a duel and fight both sides as usual, so a duel is o
 ## Rehearsal commands
 
 With `DebugCommands` on, which is off by default and set by the server, `/duel spar` rehearses a duel alone, and `/duel testwin`, `/duel testyield`, `/duel testmessages`, `/duel testannounce`, `/duel testsound` and `/duel panels` show the end of a duel, the messages and the panels.
+
+`/duel practice` fights a whole duel against yourself, with the real ring, countdown, tally, ending and card, so everything that does not need a second player can be tried alone. `/duel hit`, `/duel burn` and `/duel poison` land a blow, set you alight or poison you, so there is something for it to record; the last two go through the game's own effects, which is what turns them into the damage over time a duel has to recognise. Nothing protects you from a creature while you practise. What a rehearsal did is written to the log.
 
 ## Building
 

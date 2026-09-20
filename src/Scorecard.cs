@@ -84,8 +84,7 @@ namespace Sparring
             if (Plugin.DebugCommands)
             {
                 Plugin.Log.LogInfo($"Sparring card: {Outcome} vs {Against}, took {TookTotal:0.#} over {TookHits}, " +
-                                   $"dealt {GaveTotal:0.#} over {GaveHits}, {Seconds:0.#}s, " +
-                                   (_showUntil > 0f ? "shown." : "withheld."));
+                                   $"{Seconds:0.#}s, " + (_showUntil > 0f ? "shown." : "withheld."));
             }
         }
 
@@ -100,6 +99,12 @@ namespace Sparring
             // It usually lands a moment after our own side closed, so keep the card up long enough
             // to be read with both halves on it rather than only the half we had first.
             if (Showing) _showUntil = Time.realtimeSinceStartup + ShowSeconds * 0.6f;
+
+            // Always after the card was written down, which is why that line cannot carry it.
+            if (Plugin.DebugCommands)
+            {
+                Plugin.Log.LogInfo($"Sparring card: dealt {GaveTotal:0.#} over {GaveHits}.");
+            }
         }
 
         /// <summary>

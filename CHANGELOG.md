@@ -2,7 +2,7 @@
 
 ## 0.2.0
 
-Creatures no longer ignore the fighters. A duel used to leave both of them unnoticed by the wildlife, which turned a challenge into a way of putting someone where they could not be helped and nothing would come for whoever arranged it. Duels are now fought in the world as it is, and the standing rule that a duel cannot be started with anything hostile around the ring is what keeps them honest. The `NeutralToCreatures` setting is gone; an older entry left in your config file is ignored.
+Creatures no longer ignore the fighters. Going unnoticed by the wildlife made a challenge worth sending in bad faith, which is not what duelling is for. Duels are fought in the world as it stands, and the rule that none can be started with anything hostile around the ring is what keeps them safe. The `NeutralToCreatures` setting is gone, and an older entry left behind in a config file is ignored. Only the two fighters need the mod now.
 
 The card shown when a duel ends now counts every blow it should. Damage is read in a way that survives another mod throwing an exception partway through the game's own damage path, which otherwise left the card with nothing on it and so hidden, looking no different from a duel in which nobody landed a hit.
 
