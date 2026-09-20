@@ -776,14 +776,14 @@ namespace Sparring
         /// Lands a real blow on yourself, so a practice card can be filled without waiting for
         /// something to wander past and take an interest.
         ///
-        /// It goes through <c>ApplyDamage</c>, which is where the game subtracts the health and
-        /// fires the callback the tally listens on, so what lands is a genuine hit rather than a
-        /// number written into the card. Armour and resistances are not applied — those happen in
-        /// <c>Damage</c>, further up — so the amount asked for is close to the amount that lands.
+        /// It goes through <c>ApplyDamage</c>, which is where the game subtracts the health, so
+        /// what lands is a genuine hit rather than a number written into the card. Armour and
+        /// resistances are not applied — those happen in <c>Damage</c>, further up — so the amount
+        /// asked for is close to the amount that lands.
         ///
-        /// A lethal one is worth trying: the hit is recorded as coming from your opponent, which in
-        /// a practice duel is you, so it takes the same route a fatal blow takes in a real duel and
-        /// should come out as a yield rather than a death.
+        /// A lethal one is recorded as coming from the opponent, which in a practice duel is this
+        /// player, so it takes the route a fatal blow takes in a real duel and ends in a yield
+        /// rather than a death.
         /// </summary>
         public static void SelfHit(float amount)
         {
