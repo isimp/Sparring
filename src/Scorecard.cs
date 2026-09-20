@@ -96,17 +96,28 @@ namespace Sparring
         /// Records a blow that landed on us. Called for every hit the local player takes while a
         /// duel is on, and decides here whether it belongs on the card.
         /// </summary>
-        public static void Count(float amount, Character attacker)
+        public static void Count(float amount, Character attacker, HitData hit)
         {
-            if (amount <= 0f || attacker == null || !Duel.Active) return;
+            if (amount <= 0f || !Duel.Active) return;
 
-            // Only the opponent's blows count; damage from anything else is ignored. A practice
-            // duel has no opponent but itself, so there everything that lands counts instead.
-            if (!Duel.Practising && attacker.GetZDOID() != Duel.Opponent) return;
+            // A practice duel has no opponent but itself, so there everything that lands counts.
+            if (!Duel.Practising && !FromOpponent(attacker, hit)) return;
 
             TookTotal += amount;
             TookHits++;
             if (amount > TookBiggest) TookBiggest = amount;
+        }
+
+        /// <summary>
+        /// Whether a blow was the opponent's doing. Their own hits name them; what they set alight
+        /// arrives later as a tick with nobody named on it, read as theirs by the same rule that
+        /// decides whether such a tick is allowed to kill.
+        /// </summary>
+        private static bool FromOpponent(Character attacker, HitData hit)
+        {
+            return attacker != null
+                ? attacker.GetZDOID() == Duel.Opponent
+                : Duel.OpponentTick(hit);
         }
 
         /// <summary>Fills the card with plausible numbers, for looking at it without a duel.</summary>

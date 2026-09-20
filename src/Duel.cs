@@ -756,8 +756,34 @@ namespace Sparring
         }
 
         /// <summary>
-        /// Whether a killing blow should become a yield instead. Only the opponent's own hits count:
-        /// anything else, such as creatures, falls or drowning, kills as usual.
+        /// Whether a hit carrying no attacker should be read as the opponent's.
+        ///
+        /// Fire, spirit and poison do not land with the blow that carried them. They are put on as
+        /// a status effect, whose periodic damage builds a fresh hit with nobody named on it and
+        /// applies it straight to the victim. Frost and lightning do no damage over time at all, so
+        /// between them <c>Burning</c> — which carries spirit as well as fire — and <c>Poisoned</c>
+        /// are every way an opponent's weapon can still be hurting you after the swing is over.
+        ///
+        /// Inside a duel there is little else either is likely to be, so both are taken as theirs.
+        /// That covers the case this exists for: an arrow that sets you alight and then finishes
+        /// you. The imprecision is that a duel fought standing in a fire credits the fire to your
+        /// opponent, which costs a wrong line on a card and a yield that should have been a death.
+        ///
+        /// Everything else that burns or drowns a person — smoke, lava, cinders, cold, deep water,
+        /// a long fall — keeps its own hit type and is not covered, so none of them stops killing.
+        /// </summary>
+        public static bool OpponentTick(HitData hit)
+        {
+            if (hit == null || hit.HaveAttacker()) return false;
+
+            return hit.m_hitType == HitData.HitType.Burning
+                || hit.m_hitType == HitData.HitType.Poisoned;
+        }
+
+        /// <summary>
+        /// Whether a killing blow should become a yield instead. Only the opponent counts, by their
+        /// own hand or by what they set alight: anything else, such as creatures, falls or
+        /// drowning, kills as usual.
         /// </summary>
         public static bool ShouldSurvive(Player me)
         {
@@ -768,8 +794,11 @@ namespace Sparring
             // running but the network does not is never a reason to survive a hit.
             if (!Lease.Corroborated(me, out var confirmed) || confirmed != _opponent) return false;
 
-            var attacker = Patches.LastAttacker(me);
-            return attacker != null && attacker.GetZDOID() == _opponent;
+            var hit = Patches.LastHit(me);
+            if (hit == null) return false;
+
+            var attacker = hit.GetAttacker();
+            return attacker != null ? attacker.GetZDOID() == _opponent : OpponentTick(hit);
         }
 
         /// <summary>

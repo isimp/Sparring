@@ -11,7 +11,7 @@ namespace Sparring
     [HarmonyPatch]
     public static class Patches
     {
-        private static AccessTools.FieldRef<Character, HitData> _lastHit;
+        private static AccessTools.FieldRef<Character, HitData> _lastHitRef;
 
         /// <summary>
         /// Turns the killing blow into a yield.
@@ -94,7 +94,7 @@ namespace Sparring
                 if (__instance == null || __instance != Player.m_localPlayer) return;
                 if (__instance.GetHealth() >= __state) return;
 
-                Scorecard.Count(hit.GetTotalDamage(), hit.GetAttacker());
+                Scorecard.Count(hit.GetTotalDamage(), hit.GetAttacker(), hit);
             }
             catch (Exception ex)
             {
@@ -308,17 +308,19 @@ namespace Sparring
         }
 
         /// <summary>
-        /// Who landed the last hit on someone. <c>Character.m_lastHit</c> is protected, and it is
-        /// the only record of what brought a player to zero by the time <c>CheckDeath</c> runs.
+        /// The last hit somebody took. <c>Character.m_lastHit</c> is protected, and it is the only
+        /// record of what brought a player to zero by the time <c>CheckDeath</c> runs. The whole
+        /// hit rather than just its attacker, because a hit with nobody named on it can still say
+        /// what it was.
         /// </summary>
-        public static Character LastAttacker(Character victim)
+        public static HitData LastHit(Character victim)
         {
             if (victim == null) return null;
 
             try
             {
-                if (_lastHit == null) _lastHit = AccessTools.FieldRefAccess<Character, HitData>("m_lastHit");
-                return _lastHit(victim)?.GetAttacker();
+                if (_lastHitRef == null) _lastHitRef = AccessTools.FieldRefAccess<Character, HitData>("m_lastHit");
+                return _lastHitRef(victim);
             }
             catch (Exception ex)
             {
