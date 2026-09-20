@@ -716,6 +716,8 @@ namespace Sparring
             var opponent = _opponent;
             var name = _opponentName;
 
+            if (Plugin.DebugCommands) Plugin.Log.LogInfo($"Sparring duel ended: {reason} against {name}.");
+
             // Before the fields are cleared: the card needs the terms for the duration and the
             // opponent for where to send our half. A summary is shown only for a duel somebody won.
             var decided = reason.Decided();
@@ -828,6 +830,8 @@ namespace Sparring
 
             // The damage path is one other mods patch heavily, and a throw from any of them would
             // otherwise leave the chat window stuck on the command that caused it.
+            Plugin.Log.LogInfo($"Sparring practice: hit for {hit.GetTotalDamage():0.#}.");
+
             try
             {
                 me.ApplyDamage(hit, showDamageText: true, triggerEffects: true);
@@ -869,6 +873,7 @@ namespace Sparring
             }
 
             Say($"Alight for {Mathf.RoundToInt(amount)} over time.");
+            Plugin.Log.LogInfo($"Sparring practice: alight for {amount:0.#}.");
         }
 
         /// <summary>The same for poison, which the game carries in its own effect.</summary>
@@ -885,6 +890,7 @@ namespace Sparring
             // Only a dose larger than whatever is already running takes hold.
             poison.AddDamage(Mathf.Clamp(amount, 1f, 1000f));
             Say($"Poisoned for {Mathf.RoundToInt(amount)} over time.");
+            Plugin.Log.LogInfo($"Sparring practice: poisoned for {amount:0.#}.");
         }
 
         /// <summary>The checks both of the above share, and the effect manager they need.</summary>
@@ -928,6 +934,7 @@ namespace Sparring
 
             BeginWith(me.GetZDOID(), "Practice", terms);
             Say("Practice duel. Take a few hits, then yield or step out of the ring.");
+            Plugin.Log.LogInfo($"Sparring practice: duel begun, ring {terms.Radius:0.#}m.");
         }
 
         /// <summary>Re-challenge whoever you last fought, if they are still around.</summary>

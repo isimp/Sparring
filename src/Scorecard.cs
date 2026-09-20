@@ -77,6 +77,16 @@ namespace Sparring
             _showUntil = show && (TookHits > 0 || GaveHits > 0)
                 ? Time.realtimeSinceStartup + ShowSeconds
                 : 0f;
+
+            // A card with nothing on it is withheld, which looks exactly like a duel nobody landed
+            // a hit in. Anyone who has turned the rehearsal commands on is testing something, and
+            // is owed the difference in writing.
+            if (Plugin.DebugCommands)
+            {
+                Plugin.Log.LogInfo($"Sparring card: {Outcome} vs {Against}, took {TookTotal:0.#} over {TookHits}, " +
+                                   $"dealt {GaveTotal:0.#} over {GaveHits}, {Seconds:0.#}s, " +
+                                   (_showUntil > 0f ? "shown." : "withheld."));
+            }
         }
 
         /// <summary>Their tally of what they took is our tally of what we dealt.</summary>
