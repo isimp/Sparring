@@ -874,6 +874,12 @@ namespace Sparring
             _incoming = ZDOID.None;
             ArenaRing.Refresh();
 
+            // This is the other way out of a practice duel: dying in one, which it does not protect
+            // against. Leaving these set would mean the next real duel counted every blow that
+            // landed and left the fighters worth attacking.
+            Practising = false;
+            Lease.AllowSelfPair = false;
+
             // The pauses are deliberately kept. This runs whenever there is no body, including
             // between a death and the respawn, and clearing them then would hand anyone who was
             // just declined a free way to start again. They expire on their own.
