@@ -28,6 +28,12 @@ namespace Sparring
         /// <summary>How long to wait for a result to explain a pairing that has gone.</summary>
         private const double UnpairedGrace = 2.0;
 
+        /// <summary>
+        /// The last whole second of countdown a sound was made for. Starts on the second the duel
+        /// was struck, which already has its own sound, so the first tick is the one after.
+        /// </summary>
+        private static int _countedTo;
+
         private static ZDOID _outgoing = ZDOID.None;
         private static string _outgoingName = "";
         private static double _outgoingUntil;
@@ -126,7 +132,27 @@ namespace Sparring
                 Lease.Stamp(me, _opponent);
                 _nextRenew = now + Lease.RenewSeconds;
             }
+
+            Count();
         }
+
+        /// <summary>
+        /// A tick for each second the countdown loses and the bell when it runs out. Read off the
+        /// shared start time, so both fighters hear the bell on the same instant without anything
+        /// being sent for it.
+        /// </summary>
+        private static void Count()
+        {
+            var whole = WholeSecondsLeft();
+            if (whole == _countedTo) return;
+
+            if (whole > 0) Sound.Play(Sound.Cue.CountdownTick);
+            else if (_countedTo > 0) Sound.Play(Sound.Cue.FightBegins);
+
+            _countedTo = whole;
+        }
+
+        private static int WholeSecondsLeft() => (int)Math.Ceiling(_terms.CountdownLeft);
 
         /// <summary>
         /// Invitations expire with time and with distance. Walking away from a pending challenge
@@ -474,6 +500,7 @@ namespace Sparring
             {
                 Rest(responder);
                 ClearIncoming(Messages.TheyWithdrew, _incomingName);
+                Sound.Play(Sound.Cue.CameToNothing);
                 return;
             }
 
@@ -495,6 +522,7 @@ namespace Sparring
             {
                 Rest(responder);
                 Say(string.Format(Messages.TheyDeclined, name));
+                Sound.Play(Sound.Cue.CameToNothing);
                 return;
             }
 
@@ -502,6 +530,7 @@ namespace Sparring
             // "the middle" from positions a moment apart would draw two different rings.
             terms.Radius = Plugin.ClampRadius(terms.Radius);
             terms.StartAtMs = SaneStart(terms.StartAtMs);
+            Sound.Play(Sound.Cue.Accepted);
             BeginWith(responder, name, terms);
         }
 
@@ -518,6 +547,7 @@ namespace Sparring
             if (why == Busy.Cooldown) Rest(from);
 
             Say(string.Format(TheyCannot(why), name));
+            Sound.Play(Sound.Cue.CameToNothing);
         }
 
         /// <summary>What to tell a challenger about why the other player is not free.</summary>
@@ -569,6 +599,7 @@ namespace Sparring
             _lastFoe = opponent;
             _lastFoeName = _opponentName;
             _lastRadius = terms.Radius;
+            _countedTo = WholeSecondsLeft();
 
             Lease.SetTerms(me, terms);
             Lease.Stamp(me, opponent);
@@ -624,6 +655,7 @@ namespace Sparring
             Scorecard.SetOutcome(DuelOutcome.Lost);
             EndLocal(EndReason.Yielded, notify: true);
             Recovery.Restore(me, Plugin.YieldHealth);
+            Sound.Play(Sound.Cue.KnockedDown);
 
             // After the health is back: Stagger does nothing for a character the game still sees
             // as finished, and the animation is driven through ZSyncAnimation, so the winner sees
@@ -754,6 +786,9 @@ namespace Sparring
             if (reason == EndReason.OutOfRange) Say(Messages.OutOfRing);
             else if (reason == EndReason.Withdrew && name.Length > 0) Say(string.Format(Messages.TheyWithdrew, name));
             else if (reason == EndReason.LeaseLapsed && name.Length > 0) Say(string.Format(Messages.LostTrack, name));
+
+            // A death already makes its own noise, and an ending somebody won has the victory.
+            if (!decided && reason != EndReason.Died) Sound.Play(Sound.Cue.CameToNothing);
         }
 
         /// <summary>

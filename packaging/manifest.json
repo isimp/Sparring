@@ -1,6 +1,6 @@
 {
   "name": "Sparring",
-  "version_number": "0.2.0",
+  "version_number": "0.2.1",
   "website_url": "https://github.com/isimp/Sparring",
   "description": "Duel another player without either of you dying. Yield instead of falling, then both of you get back up.",
   "dependencies": []

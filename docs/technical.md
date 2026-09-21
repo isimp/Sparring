@@ -28,6 +28,10 @@ Hits can carry a flag that skips the victim's PvP check. The unmodified game nev
 
 The ring is built on each client from the centre and radius already carried in the duel state, so nothing is spawned into the world or left behind. By default posts are placed around the edge with a marker in the middle; `RingStyle` set to `Line` draws a plain circle instead. Marker and sound names are prefab names. With `DebugCommands` on, `/duel prefabs <text>` lists prefabs, `/duel sounds <text>` lists sounds, and `/duel playsound <name>` plays one.
 
+## Sounds
+
+Only a few of the game's sounds are registered with the scene by name. Most are referenced straight from the effect lists of the items, pieces, creatures, status effects and interface that play them, so a name the scene does not know is looked up in an index of those lists. Building it walks the whole game once and takes around a tenth of a second, so the duel's own sounds are looked up once on entering a world and never during a duel. Sounds that belong only to locations, such as boss altars and waystones, are not indexed, because locations are loaded on demand and walking them would force those loads. Every sound is played locally, from a prefab spawned with its network view disabled and removed on a timer, so nobody else hears it and nothing is left behind.
+
 ## Limits
 
 Creatures take no notice of a duel and fight both sides as usual, so a duel is only as safe as the ground it is fought on. Valheim is client authoritative, so a player who edits their own game can make themselves unkillable with or without this mod. Status effects added by other mods are not cleared unless listed in `AlsoClear`. If none of the shaders the ring can use are available, no ring is drawn, and the duel still ends when a fighter leaves the arena.

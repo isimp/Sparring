@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace Sparring
 {
-    [BepInPlugin(Guid, "Sparring", "0.2.0")]
+    [BepInPlugin(Guid, "Sparring", "0.2.1")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "isimp.Sparring";
@@ -49,6 +49,7 @@ namespace Sparring
         private static ConfigEntry<RingStyle> _ringStyle;
         private static ConfigEntry<bool> _challengeSoundOn;
         private static ConfigEntry<string> _challengeSound;
+        private static ConfigEntry<bool> _duelSounds;
         private static ConfigEntry<bool> _winnerEffect;
         private static ConfigEntry<string> _winnerEmote;
 
@@ -88,6 +89,7 @@ namespace Sparring
         public static RingStyle RingStyle => _ringStyle?.Value ?? RingStyle.Stakes;
         public static bool ChallengeSoundOn => _challengeSoundOn?.Value ?? true;
         public static string ChallengeSound => (_challengeSound?.Value ?? "sfx_silvermace_hit").Trim();
+        public static bool DuelSounds => _duelSounds?.Value ?? true;
         public static bool WinnerEffect => _winnerEffect?.Value ?? true;
         public static string WinnerEmote => (_winnerEmote?.Value ?? "cheer").Trim().ToLowerInvariant();
 
@@ -270,6 +272,10 @@ namespace Sparring
             _challengeSound = Config.Bind("4 - Display", "ChallengeSoundPrefab", "sfx_silvermace_hit",
                 "Sound prefab played on a challenge. A name that does not resolve falls back to the skill-up chime. " +
                 "With DebugCommands on, /duel sounds <text> lists audible prefabs and /duel playsound <name> plays one.");
+            _duelSounds = Config.Bind("4 - Display", "DuelSounds", true,
+                "Play sounds through a duel: one when your challenge is accepted, a tick each second of the countdown, " +
+                "a bell when the fight begins, one when you are knocked down, and one when a challenge is turned down " +
+                "or withdrawn or a duel is called off. Only you hear them.");
 
             _winnerEffect = Config.Bind("4 - Display", "WinnerEffect", true,
                 "Show the skill-up effect over the winner, three times. Everyone nearby running Sparring sees it.");
@@ -324,6 +330,7 @@ namespace Sparring
             // Best effort. If none of this runs, the lease lapses and every protection ends by itself.
             try
             {
+                Sound.Mute();
                 ArenaRing.HideAll();
                 ArenaRing.HidePreview();
                 Victory.Stop();
@@ -342,6 +349,7 @@ namespace Sparring
         {
             try
             {
+                Sound.Prepare();
                 Duel.Tick();
                 Keys.Tick();
                 Preview.Tick();
