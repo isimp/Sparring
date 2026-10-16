@@ -249,35 +249,6 @@ namespace Sparring
             Scorecard.Rehearse("Eyvind", DuelOutcome.Won);
         }
 
-        /// <summary>
-        /// Lists prefab names matching some text, into the console, so a centre marker can be
-        /// picked by looking rather than guessing. Capped, since the full list runs to thousands.
-        /// </summary>
-        public static void ListPrefabs(string filter)
-        {
-            var scene = ZNetScene.instance;
-            if (scene == null) { Duel.Say("Not in a world yet."); return; }
-
-            if (string.IsNullOrEmpty(filter)) { Duel.Say("Add a search term: /duel prefabs torch"); return; }
-
-            var names = scene.GetPrefabNames();
-            var shown = 0;
-
-            foreach (var name in names)
-            {
-                if (name.IndexOf(filter, System.StringComparison.OrdinalIgnoreCase) < 0) continue;
-
-                Plugin.Log.LogInfo($"prefab: {name}");
-                Console.instance?.AddString(name);
-                if (++shown >= 40) break;
-            }
-
-            var summary = shown == 0
-                ? $"Nothing matching \"{filter}\"."
-                : $"{shown} matching \"{filter}\" — in the console (F5) and the log.";
-            Duel.Say(summary);
-        }
-
         private static void Begin(FakePanel panel)
         {
             _panel = panel;

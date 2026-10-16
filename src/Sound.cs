@@ -6,14 +6,14 @@ using UnityEngine;
 namespace Sparring
 {
     /// <summary>
-    /// The noise a challenge makes, so an invitation is not something you only notice if you
-    /// happened to be looking at the middle of the screen.
+    /// The noises a duel makes: the challenge, and the moments of the duel itself, so none of them
+    /// is something you only notice if you happened to be looking at the middle of the screen.
     ///
-    /// Plays one of the game's own sounds rather than shipping an audio file. Which one is yours to
-    /// choose by prefab name, because sound names live in the asset bundles and cannot be read from
-    /// any assembly — <c>/duel sounds</c> lists what your install has. Failing a name, it falls
-    /// back to the chime the game plays when a skill goes up, which is the one effect on Player
-    /// proven to exist and to be audible, since <c>OnSkillLevelup</c> does nothing else with it.
+    /// Plays the game's own sounds rather than shipping audio files. The challenge sound is yours
+    /// to choose by prefab name, because sound names live in the asset bundles and cannot be read
+    /// from any assembly. Failing a name, it falls back to the chime the game plays when a skill
+    /// goes up, which is the one effect on Player proven to exist and to be audible, since
+    /// <c>OnSkillLevelup</c> does nothing else with it.
     ///
     /// Local in every sense: it is played on the machine that received the challenge, from a
     /// prefab spawned with its network view disabled and destroyed on a timer, so nothing is heard
@@ -49,6 +49,9 @@ namespace Sparring
             { Cue.KnockedDown, "sfx_gameltroll_throw_attack_impact" },
             { Cue.CameToNothing, "sfx_gui_craftitem_workbench_end" },
         };
+
+        /// <summary>Each moment and the sound built in for it.</summary>
+        internal static IEnumerable<KeyValuePair<Cue, string>> Cues => CueNames;
 
         private static readonly Dictionary<Cue, GameObject> _cues = new Dictionary<Cue, GameObject>();
         private static bool _cuesReady;
@@ -127,70 +130,9 @@ namespace Sparring
             _chime = Find(named);
             if (_chime == null)
             {
-                Plugin.Log.LogWarning($"Sparring could not find a sound called \"{named}\"; using the skill-up chime. /duel sounds lists what is there.");
+                Plugin.Log.LogWarning($"Sparring could not find a sound called \"{named}\"; using the skill-up chime.");
             }
             return _chime;
-        }
-
-        /// <summary>
-        /// Plays one sound by name, so a choice can be made by listening instead of guessing.
-        ///
-        /// It also says whether the prefab has any audio on it at all, which is the thing a name
-        /// cannot tell you: plenty of prefabs sound like sounds and are not, and silence then means
-        /// either "wrong name", "no audio" or "played, and it is quiet" with no way to tell which.
-        /// </summary>
-        public static void Audition(string name)
-        {
-            var me = Player.m_localPlayer;
-            if (me == null) { Duel.Say("Not in a world yet."); return; }
-
-            if (string.IsNullOrEmpty(name)) { Duel.Say("Add a sound name: /duel playsound sfx_haldor_greet"); return; }
-
-            var prefab = Find(name);
-            if (prefab == null) { Duel.Say($"No prefab called \"{name}\"."); return; }
-
-            var audible = prefab.GetComponentInChildren<AudioSource>(true) != null;
-            Play(prefab, me);
-
-            Duel.Say(audible
-                ? $"Playing {name}. Set ChallengeSoundPrefab to keep it."
-                : $"{name} has no audio on it — nothing to hear.");
-        }
-
-        /// <summary>
-        /// Lists prefabs matching some text that actually carry audio.
-        ///
-        /// The plain prefab listing is names only, and most of what matches "sfx" is not something
-        /// you would want or can even hear. Filtering on an AudioSource turns a few hundred guesses
-        /// into a handful worth auditioning.
-        /// </summary>
-        public static void List(string filter)
-        {
-            var scene = ZNetScene.instance;
-            if (scene == null) { Duel.Say("Not in a world yet."); return; }
-            if (string.IsNullOrEmpty(filter)) { Duel.Say("Add a search term: /duel sounds horn"); return; }
-
-            // Registered prefabs and everything the effect lists point at, once each, in order.
-            var names = new SortedSet<string>(scene.GetPrefabNames(), StringComparer.OrdinalIgnoreCase);
-            var effects = Effects();
-            if (effects != null) names.UnionWith(effects.Keys);
-
-            var shown = 0;
-            foreach (var name in names)
-            {
-                if (name.IndexOf(filter, StringComparison.OrdinalIgnoreCase) < 0) continue;
-
-                var prefab = Find(name);
-                if (prefab == null || prefab.GetComponentInChildren<AudioSource>(true) == null) continue;
-
-                Plugin.Log.LogInfo($"sound: {name}");
-                Console.instance?.AddString(name);
-                if (++shown >= 30) break;
-            }
-
-            Duel.Say(shown == 0
-                ? $"Nothing audible matching \"{filter}\"."
-                : $"{shown} audible matching \"{filter}\" — in the console (F5). /duel playsound <name> to hear one.");
         }
 
         private static void Play(GameObject prefab, Player at)
@@ -221,10 +163,10 @@ namespace Sparring
         ///
         /// <c>ZNetScene.GetPrefab</c> only knows the prefabs registered with the scene, and most
         /// sounds are not among them: they are referenced straight from the effect lists on the
-        /// items, pieces, creatures and status effects that play them. A name the scene does not
-        /// know is looked up among those as well.
+        /// interface, status effects, items, pieces and creatures that play them. A name the scene
+        /// does not know is looked for among those as well.
         /// </summary>
-        private static GameObject Find(string name)
+        internal static GameObject Find(string name)
         {
             var scene = ZNetScene.instance;
             if (scene == null || string.IsNullOrEmpty(name)) return null;
@@ -232,94 +174,151 @@ namespace Sparring
             var prefab = scene.GetPrefab(name);
             if (prefab != null) return prefab;
 
-            var effects = Effects();
-            return effects != null && effects.TryGetValue(name, out var found) ? found : null;
+            if (_effects.TryGetValue(name, out var met)) return met;
+            if (WalkedAll) return null;
+
+            Walk(Wanted(scene, name));
+            return _effects.TryGetValue(name, out var found) ? found : null;
         }
 
-        private static Dictionary<string, GameObject> _effects;
+        /// <summary>Where a sound was found: registered with the scene, in an effect list, or nowhere (null).</summary>
+        internal static string Source(string name)
+        {
+            var scene = ZNetScene.instance;
+            if (scene == null || string.IsNullOrEmpty(name)) return null;
+
+            if (scene.GetPrefab(name) != null) return "registered with the scene";
+            return Find(name) != null ? "found in an effect list" : null;
+        }
+
+        private static readonly Dictionary<string, GameObject> _effects = new Dictionary<string, GameObject>(StringComparer.OrdinalIgnoreCase);
         private static readonly Dictionary<Type, FieldInfo[]> _effectFields = new Dictionary<Type, FieldInfo[]>();
 
+        /// <summary>Whether a walk has been through the whole game, so a name it did not meet is nowhere to be found.</summary>
+        internal static bool WalkedAll { get; private set; }
+
+        /// <summary>How many effect prefabs the walks have met.</summary>
+        internal static int Indexed => _effects.Count;
+
+        /// <summary>How long the walks took between them.</summary>
+        internal static long IndexMilliseconds { get; private set; }
+
         /// <summary>
-        /// Every prefab an effect list in the game points at, by name.
-        ///
-        /// Built once, the first time a name misses the scene, by walking every registered prefab's
-        /// components, the shared data and attacks of every item, every status effect, and the
-        /// interface. It is a walk over the whole game, so it is only ever started by a name the
-        /// scene did not know, and how long it took is written to the log.
+        /// Everything one walk should look for: the name asked about and every sound Sparring will
+        /// ask about later, so a single walk serves them all. Names the scene knows, or a walk has
+        /// already met, are left out.
+        /// </summary>
+        private static HashSet<string> Wanted(ZNetScene scene, string asked)
+        {
+            var wanted = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { asked };
+            if (Plugin.DuelSounds)
+            {
+                foreach (var name in CueNames.Values) wanted.Add(name);
+            }
+            if (Plugin.ChallengeSoundOn && !string.IsNullOrEmpty(Plugin.ChallengeSound)) wanted.Add(Plugin.ChallengeSound);
+
+            wanted.RemoveWhere(name => _effects.ContainsKey(name) || scene.GetPrefab(name) != null);
+            return wanted;
+        }
+
+        /// <summary>
+        /// Walks the game's effect lists until every wanted name has been met, or until there is
+        /// nothing left to walk. Stopping early is the point: a full walk takes around a tenth of a
+        /// second, and what Sparring needs is usually met long before the end. A name that exists
+        /// nowhere still costs one full walk, after which a miss is answered at once.
         ///
         /// Sounds that belong only to locations, such as the boss altars and waystones, stay out of
-        /// reach: locations are loaded from their bundles on demand, and walking them would force
-        /// those loads.
+        /// reach unless something walked here also uses them: locations are loaded from their
+        /// bundles on demand, and walking them would force those loads.
         /// </summary>
-        private static Dictionary<string, GameObject> Effects()
+        private static void Walk(HashSet<string> wanted)
         {
-            if (_effects != null) return _effects;
-
-            var scene = ZNetScene.instance;
-            if (scene == null) return null;
-
             var watch = System.Diagnostics.Stopwatch.StartNew();
-            var index = new Dictionary<string, GameObject>(StringComparer.OrdinalIgnoreCase);
+            var complete = true;
 
             try
             {
-                foreach (var name in scene.GetPrefabNames())
+                foreach (var owner in Owners())
                 {
-                    var prefab = scene.GetPrefab(name);
-                    if (prefab == null) continue;
-
-                    foreach (var component in prefab.GetComponentsInChildren<Component>(true))
+                    Gather(owner, wanted);
+                    if (wanted.Count == 0)
                     {
-                        if (component == null) continue;
-                        Gather(component, index);
-
-                        var shared = (component as ItemDrop)?.m_itemData?.m_shared;
-                        if (shared == null) continue;
-
-                        Gather(shared, index);
-                        if (shared.m_attack != null) Gather(shared.m_attack, index);
-                        if (shared.m_secondaryAttack != null) Gather(shared.m_secondaryAttack, index);
-                    }
-                }
-
-                var db = ObjectDB.instance;
-                if (db != null)
-                {
-                    foreach (var effect in db.m_StatusEffects)
-                    {
-                        if (effect != null) Gather(effect, index);
-                    }
-                }
-
-                // The interface is part of the scene rather than a prefab, so its sounds are only
-                // reachable through the live objects. Walking from each one's root covers the whole
-                // of it, including the pieces that carry a sound of their own.
-                var roots = new HashSet<Transform>();
-                AddRoot(InventoryGui.instance, roots);
-                AddRoot(Hud.instance, roots);
-                AddRoot(StoreGui.instance, roots);
-                AddRoot(Minimap.instance, roots);
-                AddRoot(MessageHud.instance, roots);
-                AddRoot(Menu.instance, roots);
-                AddRoot(Chat.instance, roots);
-
-                foreach (var root in roots)
-                {
-                    foreach (var component in root.GetComponentsInChildren<Component>(true))
-                    {
-                        if (component != null) Gather(component, index);
+                        complete = false;
+                        break;
                     }
                 }
             }
             catch (Exception ex)
             {
-                // Whatever was gathered before the fault is still worth having.
-                Plugin.Log.LogWarning($"Sparring could not finish indexing the game's effects: {ex.Message}");
+                // What was met before the fault is kept. Walking again would only meet the same
+                // fault, so a miss after this is answered without one.
+                Plugin.Log.LogWarning($"Sparring could not finish walking the game's effects: {ex.Message}");
             }
 
-            _effects = index;
-            Plugin.Log.LogInfo($"Sparring indexed {index.Count} effect prefabs in {watch.ElapsedMilliseconds} ms.");
-            return _effects;
+            WalkedAll = complete;
+            IndexMilliseconds += watch.ElapsedMilliseconds;
+            Plugin.Log.LogInfo(complete
+                ? $"Sparring walked all of the game's effects: {Indexed} prefabs in {watch.ElapsedMilliseconds} ms."
+                : $"Sparring found the sounds it needs among {Indexed} effect prefabs in {watch.ElapsedMilliseconds} ms.");
+        }
+
+        /// <summary>
+        /// Every object whose effect lists can point at a sound. The interface comes first because
+        /// most of the duel's sounds are its own and it is small, then the status effects, then
+        /// every registered prefab with the shared data and attacks of the items among them.
+        /// </summary>
+        private static IEnumerable<object> Owners()
+        {
+            // The interface is part of the scene rather than a prefab, so its sounds are only
+            // reachable through the live objects. Walking from each one's root covers the whole
+            // of it, including the pieces that carry a sound of their own.
+            var roots = new HashSet<Transform>();
+            AddRoot(InventoryGui.instance, roots);
+            AddRoot(Hud.instance, roots);
+            AddRoot(StoreGui.instance, roots);
+            AddRoot(Minimap.instance, roots);
+            AddRoot(MessageHud.instance, roots);
+            AddRoot(Menu.instance, roots);
+            AddRoot(Chat.instance, roots);
+
+            foreach (var root in roots)
+            {
+                foreach (var component in root.GetComponentsInChildren<Component>(true))
+                {
+                    if (component != null) yield return component;
+                }
+            }
+
+            var db = ObjectDB.instance;
+            if (db != null)
+            {
+                foreach (var effect in db.m_StatusEffects)
+                {
+                    if (effect != null) yield return effect;
+                }
+            }
+
+            var scene = ZNetScene.instance;
+            if (scene == null) yield break;
+
+            foreach (var name in scene.GetPrefabNames())
+            {
+                var prefab = scene.GetPrefab(name);
+                if (prefab == null) continue;
+
+                foreach (var component in prefab.GetComponentsInChildren<Component>(true))
+                {
+                    if (component == null) continue;
+                    yield return component;
+
+                    var shared = (component as ItemDrop)?.m_itemData?.m_shared;
+                    if (shared == null) continue;
+
+                    yield return shared;
+                    if (shared.m_attack != null) yield return shared.m_attack;
+                    if (shared.m_secondaryAttack != null) yield return shared.m_secondaryAttack;
+                }
+            }
         }
 
         private static void AddRoot(Component part, HashSet<Transform> roots)
@@ -327,8 +326,8 @@ namespace Sparring
             if (part != null) roots.Add(part.transform.root);
         }
 
-        /// <summary>Adds whatever the effect lists on one object point at.</summary>
-        private static void Gather(object owner, Dictionary<string, GameObject> index)
+        /// <summary>Keeps whatever the effect lists on one object point at, crossing off each wanted name met.</summary>
+        private static void Gather(object owner, HashSet<string> wanted)
         {
             foreach (var field in EffectFields(owner.GetType()))
             {
@@ -337,7 +336,10 @@ namespace Sparring
                 foreach (var data in list.m_effectPrefabs)
                 {
                     var prefab = data?.m_prefab;
-                    if (prefab != null && !index.ContainsKey(prefab.name)) index[prefab.name] = prefab;
+                    if (prefab == null || _effects.ContainsKey(prefab.name)) continue;
+
+                    _effects[prefab.name] = prefab;
+                    wanted.Remove(prefab.name);
                 }
             }
         }

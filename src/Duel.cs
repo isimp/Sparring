@@ -76,6 +76,9 @@ namespace Sparring
         /// attribute blows to and so counts whatever lands.
         /// </summary>
         public static bool Practising { get; private set; }
+
+        /// <summary>How the last duel on this machine ended, so an ending can be told apart afterwards.</summary>
+        internal static EndReason? LastEnd { get; private set; }
         public static string OpponentName => _opponentName;
         public static bool HasInvite => !_incoming.IsNone();
         public static bool HasOutgoing => !_outgoing.IsNone();
@@ -748,6 +751,8 @@ namespace Sparring
             var opponent = _opponent;
             var name = _opponentName;
 
+            LastEnd = reason;
+
             if (Plugin.DebugCommands) Plugin.Log.LogInfo($"Sparring duel ended: {reason} against {name}.");
 
             // Before the fields are cleared: the card needs the terms for the duration and the
@@ -850,7 +855,7 @@ namespace Sparring
         /// player, so it takes the route a fatal blow takes in a real duel and ends in a yield
         /// rather than a death.
         /// </summary>
-        public static void SelfHit(float amount)
+        internal static void SelfHit(float amount)
         {
             var me = Player.m_localPlayer;
             if (me == null) return;
@@ -888,7 +893,7 @@ namespace Sparring
         /// Take enough damage first and the burn will be what finishes you, which is the case worth
         /// watching: it should end in a yield.
         /// </summary>
-        public static void SelfBurn(float amount)
+        internal static void SelfBurn(float amount)
         {
             var seman = Kindling(out var me);
             if (seman == null) return;
@@ -912,7 +917,7 @@ namespace Sparring
         }
 
         /// <summary>The same for poison, which the game carries in its own effect.</summary>
-        public static void SelfPoison(float amount)
+        internal static void SelfPoison(float amount)
         {
             var seman = Kindling(out var me);
             if (seman == null) return;
@@ -950,7 +955,7 @@ namespace Sparring
         /// there normally, and nothing that needs two machines is covered: neither the handshake
         /// nor the order the ending messages arrive in.
         /// </summary>
-        public static void Practice()
+        internal static void Practice()
         {
             var me = Player.m_localPlayer;
             if (me == null) return;

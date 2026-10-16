@@ -189,9 +189,8 @@ namespace Sparring
             _sync.AddLockingConfigEntry(_lockConfig);
 
             _debugCommands = Rule("2 - Rules", "DebugCommands", false,
-                "Enables the rehearsal and tuning commands: /duel practice, hit, burn, poison, spar, panels, " +
-                "testwin, testyield, testmessages, testannounce, testsound, sounds, playsound and prefabs. " +
-                "Off by default because several of them restore health. /duel preview is always available.");
+                "Enables the rehearsal commands: /duel spar, panels, testwin, testyield, testmessages, testannounce " +
+                "and testsound. Off by default because two of them restore health. /duel preview is always available.");
 
             _requireClearGround = Rule("2 - Rules", "RequireClearGround", true,
                 "A duel can only be started with nothing hostile around the ring. Tames and dvergr do not count.");
@@ -252,17 +251,16 @@ namespace Sparring
                 "used automatically when no post prefab can be found.");
             _ringMarker = Config.Bind("4 - Display", "RingMarker", "dvergrtown_wood_stake",
                 "Prefab placed around the edge when RingStyle is Stakes. A name that does not resolve falls back to " +
-                "a few known ones. With DebugCommands on, /duel prefabs <text> lists what is available.");
+                "a few known ones, and the log says which was used.");
             _centreMarker = Config.Bind("4 - Display", "CentreMarker", "CharredBanner2",
                 "Prefab placed in the middle of the ring, as scenery only. A name that does not resolve falls back " +
-                "to a few known ones, and the log says which was used. With DebugCommands on, /duel prefabs <text> " +
-                "lists what is available.");
+                "to a few known ones, and the log says which was used.");
 
             _challengeSoundOn = Config.Bind("4 - Display", "ChallengeSound", true,
                 "Play a sound when you are challenged. Only you hear it.");
             _challengeSound = Config.Bind("4 - Display", "ChallengeSoundPrefab", "sfx_silvermace_hit",
-                "Sound prefab played on a challenge. A name that does not resolve falls back to the skill-up chime. " +
-                "With DebugCommands on, /duel sounds <text> lists audible prefabs and /duel playsound <name> plays one.");
+                "Sound prefab played on a challenge: any sound the game plays, by its prefab name. A name that does " +
+                "not resolve falls back to the skill-up chime.");
             _duelSounds = Config.Bind("4 - Display", "DuelSounds", true,
                 "Play sounds through a duel: one when your challenge is accepted, a tick each second of the countdown, " +
                 "a bell when the fight begins, one when you are knocked down, and one when a challenge is turned down " +

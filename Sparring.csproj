@@ -56,6 +56,13 @@
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
   </ItemGroup>
 
+  <!-- The self-test is a plugin of its own beside Sparring, built from selftest/, and reaches
+       Sparring's internals from there. A release packages Sparring.dll alone. -->
+  <ItemGroup>
+    <Compile Remove="selftest/**" />
+    <InternalsVisibleTo Include="Sparring.SelfTest" />
+  </ItemGroup>
+
   <!-- ServerSync compresses its config payloads. -->
   <ItemGroup>
     <Reference Include="System.IO.Compression" />

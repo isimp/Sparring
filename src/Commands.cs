@@ -80,31 +80,6 @@ namespace Sparring
                     if (Debugging()) Preview.ShowPanels();
                     break;
 
-                // Unlike the rehearsals above, this one is a real duel: it runs the whole
-                // lifecycle against yourself, so what it shows is what the code actually does.
-                case "practice":
-                    if (Debugging()) Duel.Practice();
-                    break;
-
-                case "hit":
-                {
-                    var amount = args.Length > 2 && float.TryParse(args[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var d)
-                        ? d
-                        : 10f;
-                    if (Debugging()) Duel.SelfHit(amount);
-                    break;
-                }
-
-                // Fire and poison do not land with the blow that carried them, so they need their
-                // own way in: these hand the damage to the effects that tick it out.
-                case "burn":
-                    if (Debugging()) Duel.SelfBurn(Amount(args, 60f));
-                    break;
-
-                case "poison":
-                    if (Debugging()) Duel.SelfPoison(Amount(args, 60f));
-                    break;
-
                 case "testyield":
                     if (Debugging()) Preview.Yield();
                     break;
@@ -129,26 +104,14 @@ namespace Sparring
                     if (Debugging()) Sound.Challenge();
                     break;
 
-                // Listing and auditioning sounds, for choosing ChallengeSoundPrefab.
-                case "sounds":
-                    if (Debugging()) Sound.List(args.Length > 2 ? args[2] : "");
-                    break;
-
-                case "playsound":
-                    if (Debugging()) Sound.Audition(args.Length > 2 ? args[2] : "");
-                    break;
-
-                // Prefab names live in the game's asset bundles, so there is no way to know from
-                // outside a running game what exists. This is how you find a centre marker you like.
-                case "prefabs":
-                    if (Debugging()) Preview.ListPrefabs(args.Length > 2 ? args[2] : "");
-                    break;
-
                 case "status":
                     Status();
                     break;
 
                 default:
+                    // The self-test's words, when it is installed beside a development build.
+                    if (SelfTestHost.Answer(word, args)) break;
+
                     // A number is a ring size. Anything else is a typo, and saying so beats
                     // silently starting a duel with a size the person did not mean.
                     if (float.TryParse(word, NumberStyles.Float, CultureInfo.InvariantCulture, out var metres))
@@ -168,14 +131,6 @@ namespace Sparring
         /// preference: <c>testwin</c> hands out health and clears what a fight left on you, so
         /// whether it is available is the server's business, not each player's.
         /// </summary>
-        /// <summary>The number after a subcommand, or the given default if there is none.</summary>
-        private static float Amount(Terminal.ConsoleEventArgs args, float fallback)
-        {
-            return args.Length > 2 && float.TryParse(args[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var given)
-                ? given
-                : fallback;
-        }
-
         private static bool Debugging()
         {
             if (Plugin.DebugCommands) return true;

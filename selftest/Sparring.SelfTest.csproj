@@ -1,0 +1,61 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The in-game self-test, a plugin of its own beside Sparring that reaches into it through
+       InternalsVisibleTo. Built and deployed with a development build:
+                 dotnet build selftest
+       It is never packaged with a release, which takes Sparring.dll alone. References resolve
+       the same two ways as Sparring's own: a local install, or -p:LibsDir=lib from the
+       repository root. -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>Sparring.SelfTest</AssemblyName>
+    <RootNamespace>Sparring</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <DebugType>portable</DebugType>
+    <Nullable>annotations</Nullable>
+    <NoWarn>$(NoWarn);CS0649</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <ValheimDir Condition="'$(ValheimDir)' == '' And '$(VALHEIM_DIR)' != ''">$(VALHEIM_DIR)</ValheimDir>
+    <ValheimDir Condition="'$(ValheimDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Valheim</ValheimDir>
+    <ProfileDir Condition="'$(ProfileDir)' == ''">$(AppData)\com.kesomannen.gale\valheim\profiles\Default</ProfileDir>
+    <BepInExDir>$(ProfileDir)\BepInEx</BepInExDir>
+    <DeployDir>$(BepInExDir)\plugins\Sparring</DeployDir>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(LibsDir)' == ''">
+    <ManagedDir>$(ValheimDir)\valheim_Data\Managed</ManagedDir>
+    <CoreDir>$(BepInExDir)\core</CoreDir>
+  </PropertyGroup>
+
+  <!-- LibsDir is relative to the repository root, where both projects are built from. -->
+  <PropertyGroup Condition="'$(LibsDir)' != ''">
+    <ManagedDir>$(MSBuildThisFileDirectory)..\$(LibsDir)</ManagedDir>
+    <CoreDir>$(MSBuildThisFileDirectory)..\$(LibsDir)</CoreDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <ProjectReference Include="../Sparring.csproj" Private="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="BepInEx"><HintPath>$(CoreDir)/BepInEx.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="0Harmony"><HintPath>$(CoreDir)/0Harmony.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="assembly_valheim"><HintPath>$(ManagedDir)/assembly_valheim.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="assembly_utils"><HintPath>$(ManagedDir)/assembly_utils.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(ManagedDir)/UnityEngine.dll</HintPath><Private>false</Private></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(ManagedDir)/UnityEngine.CoreModule.dll</HintPath><Private>false</Private></Reference>
+  </ItemGroup>
+
+  <Target Name="DeployToProfile" AfterTargets="Build"
+          Condition="'$(LibsDir)' == '' And Exists('$(BepInExDir)\plugins')">
+    <MakeDir Directories="$(DeployDir)" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(DeployDir)" ContinueOnError="true" />
+    <Message Importance="high" Text="Sparring.SelfTest -> $(DeployDir)" />
+  </Target>
+
+</Project>

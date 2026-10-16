@@ -296,7 +296,7 @@ namespace Sparring
         }
 
         /// <summary>The prefab to plant around the edge. Named in config, or probed like the centre one.</summary>
-        private static GameObject Stake()
+        internal static GameObject Stake()
         {
             if (_stake != null || _stakeTried) return _stake;
             _stakeTried = true;
@@ -318,7 +318,7 @@ namespace Sparring
                 return _stake;
             }
 
-            Plugin.Log.LogWarning("Sparring found no prefab to stake the ring with, so it is drawing a line instead. /duel prefabs finds one for RingMarker.");
+            Plugin.Log.LogWarning("Sparring found no prefab to stake the ring with, so it is drawing a line instead. RingMarker takes any scenery prefab name.");
             return null;
         }
 
@@ -440,9 +440,9 @@ namespace Sparring
         ///
         /// Probed rather than hard-coded because prefab names live in the game's asset bundles, not
         /// in any assembly we can read — there is no way to know from outside the running game
-        /// which of these exist. <c>/duel prefabs &lt;text&gt;</c> lists what is actually there.
+        /// which of these exist.
         /// </summary>
-        private static GameObject Post()
+        internal static GameObject Post()
         {
             if (_post != null || _postTried) return _post;
             _postTried = true;
@@ -464,7 +464,7 @@ namespace Sparring
                 return _post;
             }
 
-            Plugin.Log.LogWarning("Sparring found no centre-marker prefab, not even its fallbacks; drawing a plain beam. /duel prefabs finds one for CentreMarker.");
+            Plugin.Log.LogWarning("Sparring found no centre-marker prefab, not even its fallbacks; drawing a plain beam. CentreMarker takes any scenery prefab name.");
             return null;
         }
 
@@ -515,7 +515,7 @@ namespace Sparring
         /// duel still ends at the edge of the arena — a missing ring is a cosmetic loss, not a
         /// broken duel, so this fails soft rather than throwing.
         /// </summary>
-        private static Material Paint()
+        internal static Material Paint()
         {
             if (_materialTried) return _material;
             _materialTried = true;

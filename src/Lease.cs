@@ -38,7 +38,7 @@ namespace Sparring
         /// Whether a lease may name its holder as its own opponent. Off except during a practice
         /// duel, which is the only case where there is nobody else to name.
         /// </summary>
-        public static bool AllowSelfPair;
+        internal static bool AllowSelfPair;
 
         /// <summary>Server time, or 0 before we are connected — which reads as "every lease expired".</summary>
         public static double Now => ZNet.instance != null ? ZNet.instance.GetTimeSeconds() : 0.0;
