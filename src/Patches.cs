@@ -134,10 +134,10 @@ namespace Sparring
         }
 
         /// <summary>
-        /// The victim's half of the same problem. <c>RPC_Damage</c> drops player-on-player damage
-        /// at <c>Character.cs:2265</c> unless the victim has PvP on or the hit is marked. The mark
-        /// is a real serialized field, so setting it here — on the attacker, before the RPC goes
-        /// out — survives the trip.
+        /// The victim's half of the same problem. <c>RPC_Damage</c> drops a player's hit on a
+        /// player unless the victim has PvP on or the hit is marked with <c>m_ignorePVP</c>, the
+        /// mark the game's own area effects use to reach friendly players. It is a serialized field,
+        /// so setting it here — on the attacker, before the RPC goes out — survives the trip.
         /// </summary>
         [HarmonyPrefix]
         [HarmonyPatch(typeof(Character), nameof(Character.Damage))]
@@ -155,54 +155,6 @@ namespace Sparring
             catch (Exception ex)
             {
                 Plugin.Log.LogDebug($"Sparring could not mark a duel hit: {ex.Message}");
-            }
-        }
-
-        /// <summary>
-        /// Refuses hits that claim to bypass PvP from anyone you have not agreed to fight.
-        ///
-        /// <c>HitData.m_ignorePVP</c> makes <c>RPC_Damage</c> skip the PvP check entirely, and the
-        /// victim honours whatever the attacker sent. Nothing in the vanilla game ever sets that
-        /// flag — the only assignment anywhere in the assembly is deserialisation — so a hit that
-        /// arrives with it set did not come from an unmodified client. That is a hole in the base
-        /// game, open with or without this mod.
-        ///
-        /// Sparring is the flag's legitimate user, which puts it in a position to shut the rest.
-        /// The test is not "does the network say we are dueling" but "does *this* client believe it
-        /// agreed to a duel with this person" — a forged claim on the wire cannot satisfy that,
-        /// because consent was never given here. The flag is cleared rather than the hit dropped,
-        /// so what remains is ordinary PvP: if you had it on, the blow lands as it always would.
-        /// </summary>
-        [HarmonyPrefix]
-        [HarmonyPatch(typeof(Character), "RPC_Damage")]
-        public static void RpcDamagePrefix(Character __instance, HitData hit)
-        {
-            try
-            {
-                if (hit == null || !hit.m_ignorePVP) return;
-                if (!Plugin.RefusePvpBypass) return;
-
-                // Only ever our own skin. Other characters are not ours to make rulings about.
-                if (__instance != Player.m_localPlayer) return;
-
-                var attacker = hit.GetAttacker();
-                if (!(attacker is Player)) return;
-
-                // Both halves, and they guard different attacks. Local consent cannot be forged
-                // over the network — Duel.Active is a field this client sets during its own
-                // handshake, not anything read back off a ZDO, and ZDOs are rewritable by any peer
-                // (ZDOMan.RPC_ZDOData accepts a higher data revision from anyone, with no check
-                // that the sender owns what they are overwriting). AreFighting cannot be forged by
-                // a confused local state, and it is false during the countdown — a window where no
-                // duel blow should land anyway.
-                var consented = Duel.Active && Duel.Opponent == attacker.GetZDOID();
-                if (consented && Lease.AreFighting(attacker, __instance)) return;
-
-                hit.m_ignorePVP = false;
-            }
-            catch (Exception ex)
-            {
-                Plugin.Log.LogDebug($"Sparring could not vet a PvP-bypassing hit: {ex.Message}");
             }
         }
 

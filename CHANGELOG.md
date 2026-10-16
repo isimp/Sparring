@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.2
+
+The Staff of Protection's shield, and any other area effect meant for friendly players, reaches them again. Those effects carry the same mark a duel blow uses to get past the PvP check, and the `RefusePvpBypass` setting treated every such hit from a player you were not duelling as forged and stripped the mark. The setting is gone, and Sparring now only marks its own duel blows and leaves every other hit as the game sent it. An older entry left behind in a config file is ignored.
+
 ## 0.2.1
 
 A duel has sounds of its own. Accepting a challenge answers the one who sent it, the countdown ticks each second and a bell marks the moment blows start counting, being knocked down has a sound, and a challenge turned down or withdrawn, or a duel called off, has another. All of them are the game's own, only you hear them, and `DuelSounds` turns them off.

@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace Sparring
 {
-    [BepInPlugin(Guid, "Sparring", "0.2.1")]
+    [BepInPlugin(Guid, "Sparring", "0.2.2")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "isimp.Sparring";
@@ -18,7 +18,6 @@ namespace Sparring
 
         private static ConfigEntry<bool> _requireOutOfCombat;
         private static ConfigEntry<bool> _requireClearGround;
-        private static ConfigEntry<bool> _refusePvpBypass;
         private static ConfigEntry<bool> _debugCommands;
         private static ConfigEntry<float> _arenaRadius;
         private static ConfigEntry<float> _inviteSeconds;
@@ -58,7 +57,6 @@ namespace Sparring
 
         public static bool RequireOutOfCombat => _requireOutOfCombat?.Value ?? true;
         public static bool RequireClearGround => _requireClearGround?.Value ?? true;
-        public static bool RefusePvpBypass => _refusePvpBypass?.Value ?? true;
         public static bool DebugCommands => _debugCommands?.Value ?? false;
         public static float ArenaRadius => _arenaRadius?.Value ?? 20f;
         public static double InviteSeconds => _inviteSeconds?.Value ?? 30f;
@@ -181,13 +179,6 @@ namespace Sparring
                 ModRequired = false,
             };
             _sync.SourceOfTruthChanged += mine => RulesFromServer = !mine;
-
-            // Local, not a rule: a server sets the rules of a duel, but does not get to switch off a
-            // player's protection against being hit by someone they never agreed to fight.
-            _refusePvpBypass = Config.Bind("5 - Safety", "RefusePvpBypass", true,
-                "Refuse hits that claim to bypass PvP from players you have not agreed to duel. The vanilla game " +
-                "never sets that flag, so such a hit comes from a modified client. The hit is not dropped; it falls " +
-                "back to ordinary PvP rules. Turn this off only if another mod uses the flag legitimately.");
 
             // Bound plainly rather than through Rule, but synchronised all the same:
             // AddLockingConfigEntry calls AddConfigEntry itself, since a lock each client could

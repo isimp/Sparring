@@ -16,13 +16,13 @@ End of duel announcements are rate limited per sender, since they are a broadcas
 
 ## Server rules
 
-The config is grouped so every section is either synchronised or local. `1 - Duel` and `2 - Rules` are synchronised from a server running Sparring. `3 - Controls`, `4 - Display` and `5 - Safety` stay local. Admins are exempt from the lock, and `LockConfiguration` turns it off.
+The config is grouped so every section is either synchronised or local. `1 - Duel` and `2 - Rules` are synchronised from a server running Sparring. `3 - Controls` and `4 - Display` stay local. Admins are exempt from the lock, and `LockConfiguration` turns it off.
 
 A client whose Sparring speaks a different message protocol than the server's is refused with a reason. This is tied to the protocol rather than the version number, so releases that do not change the protocol stay compatible. On a server without Sparring, a protocol mismatch declines the duel instead.
 
-## RefusePvpBypass
+## PvP
 
-Hits can carry a flag that skips the victim's PvP check. The unmodified game never sets it, so such a hit did not come from an unmodified client. With `RefusePvpBypass` on, which is the default, those hits are only accepted from an opponent you agreed to duel, once the duel is under way. It is a local setting, so no server can switch it off for you.
+Neither fighter turns PvP on. A blow between the two of them carries the flag the game's own area effects use to reach friendly players, which tells the victim's game to skip its PvP check, and it is only set while both leases agree the fight is under way. Sparring leaves the flag alone on every other hit, so a friendly area effect such as the Staff of Protection's shield reaches other players exactly as it does without the mod. The victim's game takes the flag on trust, as it does for any hit, so a client modified to set it can reach a player with PvP off with or without Sparring installed.
 
 ## The ring
 
