@@ -169,6 +169,24 @@ namespace Sparring
             Judged(checks, "drowning is nobody's", HitData.HitType.Drowning, null, false);
             Judged(checks, "smoke is nobody's", HitData.HitType.Smoke, null, false);
             Judged(checks, "a burn with somebody named on it is judged by who it names", HitData.HitType.Burning, Player.m_localPlayer, false);
+            Free(checks);
+        }
+
+        /// <summary>
+        /// Whether you are free to duel, as the challenged player's game reads it from yours.
+        /// Standing ready for the self-test, out of combat with PvP off and nothing hostile about,
+        /// you are free; any other answer names what was read, which a state read the wrong way
+        /// round shows as a reason you plainly do not have.
+        /// </summary>
+        private static void Free(List<SelfTestReport.Check> checks)
+        {
+            var me = Player.m_localPlayer;
+            if (me == null) return;
+
+            var why = Duel.Readiness(me, Plugin.ArenaRadius);
+            if (why == Busy.None) checks.Add(new SelfTestReport.Check("Rules", "you are read as free to duel", Result.Pass, ""));
+            else checks.Add(new SelfTestReport.Check("Rules", "you are read as free to duel", Result.Warn,
+                "read as " + why + "; stand still, out of combat with PvP off, and run it again"));
         }
 
         private static void Judged(List<SelfTestReport.Check> checks, string what, HitData.HitType type, Character attacker, bool expected)

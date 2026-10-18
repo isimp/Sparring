@@ -338,7 +338,7 @@ namespace Sparring
         }
 
         /// <summary>Whether this player is free to start a duel, and if not, why; see <see cref="Challenges.Readiness"/>.</summary>
-        private static Busy Readiness(Player me, float radius) =>
+        internal static Busy Readiness(Player me, float radius) =>
             Challenges.Readiness(StandingOf(me), Plugin.RequireOutOfCombat, Plugin.RequireClearGround, () => !GroundIsClear(me, radius));
 
         /// <summary>What this player's game knows about whether they are free.</summary>
