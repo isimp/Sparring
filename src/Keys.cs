@@ -11,7 +11,7 @@ namespace Sparring
     /// has no modifier logic and fires regardless. It is also a setting type keybind tools can
     /// read and rebind.
     /// </summary>
-    public static class Keys
+    internal static class Keys
     {
         private static float _yieldHeldFor;
 

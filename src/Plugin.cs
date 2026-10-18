@@ -10,11 +10,13 @@ using UnityEngine;
 namespace Sparring
 {
     [BepInPlugin(Guid, "Sparring", "0.2.3")]
+    [System.Diagnostics.CodeAnalysis.SuppressMessage("Reliability", "CA1001",
+        Justification = "Unity ends a plugin with OnDestroy, which unpatches; a MonoBehaviour is never disposed.")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "isimp.Sparring";
 
-        public static ManualLogSource Log;
+        internal static ManualLogSource Log;
 
         private static ConfigEntry<bool> _requireOutOfCombat;
         private static ConfigEntry<bool> _requireClearGround;
@@ -55,41 +57,41 @@ namespace Sparring
         private static readonly HashSet<string> _alsoClearSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private static Color _ring = new Color(0.85f, 0.72f, 0.35f, 0.85f);
 
-        public static bool RequireOutOfCombat => _requireOutOfCombat?.Value ?? true;
-        public static bool RequireClearGround => _requireClearGround?.Value ?? true;
-        public static bool DebugCommands => _debugCommands?.Value ?? false;
-        public static float ArenaRadius => _arenaRadius?.Value ?? 20f;
-        public static double InviteSeconds => _inviteSeconds?.Value ?? 30f;
-        public static double PairGraceSeconds => _pairGrace?.Value ?? 10f;
-        public static double CountdownSeconds => _countdown?.Value ?? 3f;
-        public static float YieldHealth => _yieldHealth?.Value ?? 0.3f;
-        public static float VictoryHealth => _victoryHealth?.Value ?? 0.5f;
-        public static bool ProtectBuildings => _protectBuildings?.Value ?? true;
-        public static bool SkillGain => _skillGain?.Value ?? true;
-        public static float SkillGainRate => _skillGainRate?.Value ?? 1f;
-        public static float LookRange => _lookRange?.Value ?? 10f;
-        public static float LookAngle => _lookAngle?.Value ?? 25f;
-        public static bool ClearEverything => _clearEverything?.Value ?? false;
-        public static HashSet<string> AlsoClear => _alsoClearSet;
+        internal static bool RequireOutOfCombat => _requireOutOfCombat?.Value ?? true;
+        internal static bool RequireClearGround => _requireClearGround?.Value ?? true;
+        internal static bool DebugCommands => _debugCommands?.Value ?? false;
+        internal static float ArenaRadius => _arenaRadius?.Value ?? 20f;
+        internal static double InviteSeconds => _inviteSeconds?.Value ?? 30f;
+        internal static double PairGraceSeconds => _pairGrace?.Value ?? 10f;
+        internal static double CountdownSeconds => _countdown?.Value ?? 3f;
+        internal static float YieldHealth => _yieldHealth?.Value ?? 0.3f;
+        internal static float VictoryHealth => _victoryHealth?.Value ?? 0.5f;
+        internal static bool ProtectBuildings => _protectBuildings?.Value ?? true;
+        internal static bool SkillGain => _skillGain?.Value ?? true;
+        internal static float SkillGainRate => _skillGainRate?.Value ?? 1f;
+        internal static float LookRange => _lookRange?.Value ?? 10f;
+        internal static float LookAngle => _lookAngle?.Value ?? 25f;
+        internal static bool ClearEverything => _clearEverything?.Value ?? false;
+        internal static HashSet<string> AlsoClear => _alsoClearSet;
 
-        public static KeyCode AcceptKey => _acceptKey?.Value ?? KeyCode.Y;
-        public static KeyCode DeclineKey => _declineKey?.Value ?? KeyCode.N;
-        public static KeyCode YieldKey => _yieldKey?.Value ?? KeyCode.Backspace;
-        public static float YieldHoldSeconds => _yieldHold?.Value ?? 0.7f;
+        internal static KeyCode AcceptKey => _acceptKey?.Value ?? KeyCode.Y;
+        internal static KeyCode DeclineKey => _declineKey?.Value ?? KeyCode.N;
+        internal static KeyCode YieldKey => _yieldKey?.Value ?? KeyCode.Backspace;
+        internal static float YieldHoldSeconds => _yieldHold?.Value ?? 0.7f;
 
-        public static bool ShowArenaRing => _showRing?.Value ?? true;
-        public static float RingWidth => _ringWidth?.Value ?? 0.15f;
-        public static Color RingColor => _ring;
-        public static float HudY => _hudY?.Value ?? 0.08f;
-        public static int HudFontSize => _hudFontSize?.Value ?? 13;
-        public static string CentreMarker => (_centreMarker?.Value ?? "CharredBanner2").Trim();
-        public static string RingMarker => (_ringMarker?.Value ?? "dvergrtown_wood_stake").Trim();
-        public static RingStyle RingStyle => _ringStyle?.Value ?? RingStyle.Stakes;
-        public static bool ChallengeSoundOn => _challengeSoundOn?.Value ?? true;
-        public static string ChallengeSound => (_challengeSound?.Value ?? "sfx_silvermace_hit").Trim();
-        public static bool DuelSounds => _duelSounds?.Value ?? true;
-        public static bool WinnerEffect => _winnerEffect?.Value ?? true;
-        public static string WinnerEmote => (_winnerEmote?.Value ?? "cheer").Trim().ToLowerInvariant();
+        internal static bool ShowArenaRing => _showRing?.Value ?? true;
+        internal static float RingWidth => _ringWidth?.Value ?? 0.15f;
+        internal static Color RingColor => _ring;
+        internal static float HudY => _hudY?.Value ?? 0.08f;
+        internal static int HudFontSize => _hudFontSize?.Value ?? 13;
+        internal static string CentreMarker => (_centreMarker?.Value ?? "CharredBanner2").Trim();
+        internal static string RingMarker => (_ringMarker?.Value ?? "dvergrtown_wood_stake").Trim();
+        internal static RingStyle RingStyle => _ringStyle?.Value ?? RingStyle.Stakes;
+        internal static bool ChallengeSoundOn => _challengeSoundOn?.Value ?? true;
+        internal static string ChallengeSound => (_challengeSound?.Value ?? "sfx_silvermace_hit").Trim();
+        internal static bool DuelSounds => _duelSounds?.Value ?? true;
+        internal static bool WinnerEffect => _winnerEffect?.Value ?? true;
+        internal static string WinnerEmote => (_winnerEmote?.Value ?? "cheer").Trim().ToLowerInvariant();
 
         /// <summary>
         /// The hard bounds on a ring, in metres. Constants rather than settings: a radius crosses
@@ -97,8 +99,8 @@ namespace Sparring
         /// number to two different rings. The proposed size stays configurable, since it only has
         /// to be right on the machine proposing it.
         /// </summary>
-        public const float RadiusFloor = 5f;
-        public const float RadiusCeiling = 60f;
+        internal const float RadiusFloor = 5f;
+        internal const float RadiusCeiling = 60f;
 
         /// <summary>
         /// Holds a proposed ring size to what the mod allows. Applied to the number typed locally
@@ -106,7 +108,7 @@ namespace Sparring
         /// untrusted input: a huge one would protect the fighters across the map, and zero would
         /// put both permanently outside the ring.
         /// </summary>
-        public static float ClampRadius(float radius)
+        internal static float ClampRadius(float radius)
         {
             if (radius <= 0f || float.IsNaN(radius)) return ArenaRadius;
             return Mathf.Clamp(radius, RadiusFloor, RadiusCeiling);
@@ -120,7 +122,7 @@ namespace Sparring
         /// that ends duels that never left the arena. Derived, it cannot disagree with the ring it
         /// guards.
         /// </summary>
-        public static float OpponentRangeFor(float radius)
+        internal static float OpponentRangeFor(float radius)
         {
             return radius * 2f + 15f;
         }
@@ -133,7 +135,7 @@ namespace Sparring
         /// Whether the rules in force came from a server rather than from this machine, so
         /// /duel status can say why a local change had no effect.
         /// </summary>
-        public static bool RulesFromServer { get; private set; }
+        internal static bool RulesFromServer { get; private set; }
 
         /// <summary>
         /// Binds a setting that is part of the *rules* and hands it to ServerSync, so an admin's

@@ -9,7 +9,7 @@ namespace Sparring
     /// longer agrees is running.
     /// </summary>
     [HarmonyPatch]
-    public static class Patches
+    internal static class Patches
     {
         private static AccessTools.FieldRef<Character, HitData> _lastHitRef;
 

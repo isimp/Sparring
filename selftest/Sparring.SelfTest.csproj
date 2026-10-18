@@ -18,6 +18,8 @@
     <NoWarn>$(NoWarn);CS0649</NoWarn>
   </PropertyGroup>
 
+  <Import Project="../BuildChecks.props" />
+
   <PropertyGroup>
     <ValheimDir Condition="'$(ValheimDir)' == '' And '$(VALHEIM_DIR)' != ''">$(VALHEIM_DIR)</ValheimDir>
     <ValheimDir Condition="'$(ValheimDir)' == ''">C:\Program Files (x86)\Steam\steamapps\common\Valheim</ValheimDir>

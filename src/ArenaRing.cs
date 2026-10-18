@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Sparring
 {
     /// <summary>How the edge of the arena is shown.</summary>
-    public enum RingStyle
+    internal enum RingStyle
     {
         /// <summary>Posts placed around the edge.</summary>
         Stakes,
@@ -23,7 +23,7 @@ namespace Sparring
     /// expire, and a crash mid-duel would leave them behind. These go with the duel, or at worst
     /// with the process. Players without Sparring see no ring.
     /// </summary>
-    public static class ArenaRing
+    internal static class ArenaRing
     {
         private const int Segments = 72;
         private const float MarkerHeight = 6f;

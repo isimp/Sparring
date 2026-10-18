@@ -1,0 +1,8 @@
+# ConfigSync.cs is vendored unmodified (README.md beside it), so the analysis Sparring holds its
+# own code to does not apply to it: a finding there is upstream's to fix, and changing the file
+# here would stop it being a plain copy that can be replaced wholesale. Marked as generated code,
+# which every analysis rule leaves alone. Generated code has no nullable context of its own, and
+# the file's annotations only need to parse (see README.md), so the warning saying so is off.
+[*.cs]
+generated_code = true
+dotnet_diagnostic.CS8669.severity = none

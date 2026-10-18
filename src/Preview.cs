@@ -3,7 +3,7 @@ using UnityEngine;
 namespace Sparring
 {
     /// <summary>Which panel a preview is standing in for.</summary>
-    public enum FakePanel
+    internal enum FakePanel
     {
         None,
         Invite,
@@ -19,7 +19,7 @@ namespace Sparring
     /// and played on one machine. Only the handshake and the announcement need two, so the rest
     /// can be shown alone.
     /// </summary>
-    public static class Preview
+    internal static class Preview
     {
         private const float PanelSeconds = 4f;
 

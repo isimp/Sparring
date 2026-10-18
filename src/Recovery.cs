@@ -17,7 +17,7 @@ namespace Sparring
     /// The limit of that, stated plainly: a mod-added debuff built on its own class is not one of
     /// these types and will not be recognised. <c>AlsoClear</c> exists to name those.
     /// </summary>
-    public static class Recovery
+    internal static class Recovery
     {
         private static readonly Type[] Harmful =
         {

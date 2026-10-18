@@ -16,7 +16,7 @@ namespace Sparring
     /// The pulse runs on every client that hears the result, on the winner's own character, so
     /// spectators see it too — not just the two who fought.
     /// </summary>
-    public static class Victory
+    internal static class Victory
     {
         private const int Pulses = 3;
         private const float PulseGap = 0.45f;

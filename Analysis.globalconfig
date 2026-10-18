@@ -1,0 +1,27 @@
+is_global = true
+
+# The .NET code analysis rules Sparring turns off, each for what it misreads here. Every other rule
+# runs and fails the build (BuildChecks.props).
+
+# Unity's objects compare equal to null once destroyed, which flow analysis does not know: a
+# null check on one that looks set is how a destroyed one is skipped, not dead code.
+dotnet_diagnostic.CA1508.severity = none
+
+# Unity calls its messages (Awake, Update, OnGUI, OnDestroy) on the instance, by name; they cannot be static.
+dotnet_diagnostic.CA1822.severity = none
+
+# A BepInEx plugin's id is a dotted name ("isimp.Sparring"), not a GUID, whatever its parameter is
+# called, and BepInEx names it GUID.
+dotnet_diagnostic.CA2243.severity = none
+dotnet_diagnostic.CA1720.severity = none
+
+# A failure in Sparring must never take the game or another mod down with it, nor swallow a death
+# it could not judge: a caught failure is told in the log (Plugin.Log) and leaves the game's own
+# rules standing, or, where it only means a value cannot be read, says so in a comment.
+# FailureStandardTests holds every catch to that.
+dotnet_diagnostic.CA1031.severity = none
+
+# The game names its emotes in lower case ("cheer"), and /duel's words are matched in lower case,
+# so text is lowered to meet them; raising it instead would miss both. Text Sparring compares, it
+# compares ordinally (StringStandardTests), never through the PC's language.
+dotnet_diagnostic.CA1308.severity = none

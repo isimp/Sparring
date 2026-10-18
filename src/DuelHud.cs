@@ -16,7 +16,7 @@ namespace Sparring
     /// inside a fixed box would clip or leave dead space; instead each row asks the style how tall
     /// it really is and the box is whatever the rows add up to.
     /// </summary>
-    public static class DuelHud
+    internal static class DuelHud
     {
         private const float PadX = 12f;
         private const float PadY = 8f;
@@ -342,7 +342,7 @@ namespace Sparring
             _rows.Clear();
         }
 
-        private static Character Foe()
+        private static Player Foe()
         {
             var id = Duel.Opponent;
             return id.IsNone() ? null : Lease.FindPlayer(id);

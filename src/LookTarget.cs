@@ -10,7 +10,7 @@ namespace Sparring
     /// person is plainly in front of you. Picking the smallest angle off your look direction does
     /// what looking at someone means.
     /// </summary>
-    public static class LookTarget
+    internal static class LookTarget
     {
         public static Player InView(out string why)
         {

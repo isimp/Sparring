@@ -13,7 +13,7 @@ namespace Sparring
     /// Accept, decline and yield are keys on the HUD. The same actions also exist as words, in
     /// case a key is taken by another mod.
     /// </summary>
-    public static class Commands
+    internal static class Commands
     {
         private static bool _registered;
 
@@ -22,7 +22,8 @@ namespace Sparring
             if (_registered) return;
             _registered = true;
 
-            new Terminal.ConsoleCommand("duel",
+            // The command adds itself to the game's list as it is made, so nothing keeps it.
+            _ = new Terminal.ConsoleCommand("duel",
                 "Duel the player you are looking at, without either of you dying. " +
                 "/duel <metres> sets the ring size; /duel preview [metres], /duel rematch, /duel status.",
                 Run, isCheat: false, isNetwork: false, onlyServer: false);

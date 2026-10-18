@@ -17,7 +17,7 @@ namespace Sparring
     /// The clock is <c>ZNet.GetTimeSeconds</c>, which is the server's own time broadcast to every
     /// client over the NetTime RPC, so two machines agree on when a lease has run out.
     /// </summary>
-    public static class Lease
+    internal static class Lease
     {
         private const string KeyOpponent = "sparring_opponent";
         private const string KeyUntil = "sparring_until";

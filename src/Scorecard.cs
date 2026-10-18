@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Sparring
 {
     /// <summary>How a duel went for the person reading the card.</summary>
-    public enum DuelOutcome
+    internal enum DuelOutcome
     {
         Undecided,
         Won,
@@ -22,7 +22,7 @@ namespace Sparring
     /// nothing in this file has to be kept in step with how damage is calculated. It arrives from
     /// <see cref="Patches.ApplyDamageFinalizer"/>, which is where a blow is heard about.
     /// </summary>
-    public static class Scorecard
+    internal static class Scorecard
     {
         private const float ShowSeconds = 8f;
 

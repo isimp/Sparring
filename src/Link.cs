@@ -5,7 +5,7 @@ using UnityEngine;
 namespace Sparring
 {
     /// <summary>Why a duel stopped. Sent between clients so both sides say the same thing.</summary>
-    public enum EndReason
+    internal enum EndReason
     {
         Yielded,
         Forfeited,
@@ -19,7 +19,7 @@ namespace Sparring
         LeftRing,
     }
 
-    public static class EndReasons
+    internal static class EndReasons
     {
         /// <summary>
         /// Whether a duel ending this way has a winner. These are the endings that restore health,
@@ -32,7 +32,7 @@ namespace Sparring
     }
 
     /// <summary>Why a challenge was turned down without being shown. Sent back to the challenger.</summary>
-    public enum Busy
+    internal enum Busy
     {
         None,
         InCombat,
@@ -51,7 +51,7 @@ namespace Sparring
     /// reads for itself. A dropped message here can therefore never strand anybody — it can only
     /// mean a duel does not start, or ends a few seconds later than it might have.
     /// </summary>
-    public static class Link
+    internal static class Link
     {
         private const string Challenge = "Sparring_Challenge";
         private const string Reply = "Sparring_Reply";

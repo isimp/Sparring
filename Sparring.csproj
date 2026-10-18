@@ -21,6 +21,8 @@
     <NoWarn>$(NoWarn);CS0649</NoWarn>
   </PropertyGroup>
 
+  <Import Project="BuildChecks.props" />
+
   <!-- Where the references come from. Two ways, because a machine with the game on it and a
        build server have nothing in common:
 

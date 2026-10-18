@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Sparring
 {
     /// <summary>
@@ -9,7 +11,7 @@ namespace Sparring
     /// means the preview cannot drift from what the game actually says, because it is reading the
     /// same strings the code does rather than a copy of them.
     /// </summary>
-    public static class Messages
+    internal static class Messages
     {
         // Refusals when starting
         public const string AlreadyDueling = "You are already dueling {0}.";
@@ -59,6 +61,12 @@ namespace Sparring
         public const string VersionGap = "Someone challenged you with a different version of Sparring. One of you needs to update.";
 
         /// <summary>
+        /// A line that takes a name, with the name put in. A name is text, which the PC's language
+        /// writes no differently, so the invariant culture only says that nothing depends on it.
+        /// </summary>
+        internal static string Named(string line, string name) => string.Format(CultureInfo.InvariantCulture, line, name);
+
+        /// <summary>
         /// Every line above, in the order you would meet them, for the preview to walk through.
         /// A line taking a name gets one so it reads as it really would.
         /// </summary>
@@ -66,38 +74,38 @@ namespace Sparring
         {
             return new[]
             {
-                string.Format(AlreadyDueling, name),
+                Named(AlreadyDueling, name),
                 NotYourself,
-                string.Format(AlreadyChallenged, name),
+                Named(AlreadyChallenged, name),
                 InCombat,
                 PvpOn,
                 NobodyInView,
                 CreaturesAbout,
                 YouAreBusy,
-                string.Format(Unreachable, name),
-                string.Format(WaitBeforeAgain, name),
-                string.Format(TooFarAway, name),
-                string.Format(TheyBusy, name),
-                string.Format(TheyInCombat, name),
-                string.Format(TheyPvpOn, name),
-                string.Format(TheyCreaturesAbout, name),
-                string.Format(TheyDueling, name),
-                string.Format(TheyAnswering, name),
+                Named(Unreachable, name),
+                Named(WaitBeforeAgain, name),
+                Named(TooFarAway, name),
+                Named(TheyBusy, name),
+                Named(TheyInCombat, name),
+                Named(TheyPvpOn, name),
+                Named(TheyCreaturesAbout, name),
+                Named(TheyDueling, name),
+                Named(TheyAnswering, name),
                 NoChallenge,
                 NoneOut,
                 NotDueling,
-                string.Format(Unanswered, name),
-                string.Format(YouWalkedOff, name),
-                string.Format(TooFarNow, name),
-                string.Format(Expired, name),
-                string.Format(YouDeclined, name),
-                string.Format(YouWithdrew, name),
-                string.Format(TheyDeclined, name),
-                string.Format(TheyWithdrew, name),
+                Named(Unanswered, name),
+                Named(YouWalkedOff, name),
+                Named(TooFarNow, name),
+                Named(Expired, name),
+                Named(YouDeclined, name),
+                Named(YouWithdrew, name),
+                Named(TheyDeclined, name),
+                Named(TheyWithdrew, name),
                 OutOfRing,
-                string.Format(LostTrack, name),
+                Named(LostTrack, name),
                 NeverDueled,
-                string.Format(NotNearby, name),
+                Named(NotNearby, name),
                 VersionGap,
             };
         }

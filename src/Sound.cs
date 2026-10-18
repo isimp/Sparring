@@ -19,7 +19,7 @@ namespace Sparring
     /// prefab spawned with its network view disabled and destroyed on a timer, so nothing is heard
     /// by anyone else and nothing is left behind if the prefab does not clean itself up.
     /// </summary>
-    public static class Sound
+    internal static class Sound
     {
         private const float Lifetime = 5f;
 

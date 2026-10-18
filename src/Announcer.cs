@@ -13,7 +13,7 @@ namespace Sparring
     /// each client that has Sparring costs unmodded players the message and buys an announcement
     /// that cannot be abused.
     /// </summary>
-    public static class Announcer
+    internal static class Announcer
     {
         private static string _last = "";
         private static float _lastAt;

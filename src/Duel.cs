@@ -13,7 +13,7 @@ namespace Sparring
     /// is what makes a wedged duel impossible: if this state machine got stuck, the leases would
     /// still lapse and everything protective would switch itself off.
     /// </summary>
-    public static class Duel
+    internal static class Duel
     {
         private static ZDOID _opponent = ZDOID.None;
         private static string _opponentName = "";
@@ -290,9 +290,9 @@ namespace Sparring
             var me = Player.m_localPlayer;
             if (me == null || target == null) return;
 
-            if (Active) { Say(string.Format(Messages.AlreadyDueling, _opponentName)); return; }
+            if (Active) { Say(Messages.Named(Messages.AlreadyDueling, _opponentName)); return; }
             if (target == me) { Say(Messages.NotYourself); return; }
-            if (HasOutgoing) { Say(string.Format(Messages.AlreadyChallenged, _outgoingName)); return; }
+            if (HasOutgoing) { Say(Messages.Named(Messages.AlreadyChallenged, _outgoingName)); return; }
 
             var name = target.GetPlayerName();
             var id = target.GetZDOID();
@@ -300,17 +300,17 @@ namespace Sparring
             var mine = Readiness(me, radius);
             if (mine != Busy.None) { Say(YouCannot(mine)); return; }
 
-            if (Resting(id)) { Say(string.Format(Messages.WaitBeforeAgain, name)); return; }
+            if (Resting(id)) { Say(Messages.Named(Messages.WaitBeforeAgain, name)); return; }
 
             // Someone further off than the proposed ring would cancel on arrival, so it is not
             // sent. This is also what keeps a rematch to someone standing near you.
-            if (Drifted(me, id, radius)) { Say(string.Format(Messages.TooFarAway, name)); return; }
+            if (Drifted(me, id, radius)) { Say(Messages.Named(Messages.TooFarAway, name)); return; }
 
             // The two parts of the other player's state that can be read from here. The rest —
             // combat, sitting, sleeping — is only known on their own machine, and is checked there
             // when the challenge arrives.
-            if (target.IsDead()) { Say(string.Format(Messages.TheyBusy, name)); return; }
-            if (target.IsPVPEnabled()) { Say(string.Format(Messages.TheyPvpOn, name)); return; }
+            if (target.IsDead()) { Say(Messages.Named(Messages.TheyBusy, name)); return; }
+            if (target.IsPVPEnabled()) { Say(Messages.Named(Messages.TheyPvpOn, name)); return; }
 
             _outgoing = id;
             _outgoingName = name;
@@ -524,7 +524,7 @@ namespace Sparring
             if (!accepted)
             {
                 Rest(responder);
-                Say(string.Format(Messages.TheyDeclined, name));
+                Say(Messages.Named(Messages.TheyDeclined, name));
                 Sound.Play(Sound.Cue.CameToNothing);
                 return;
             }
@@ -549,7 +549,7 @@ namespace Sparring
             ClearOutgoing(null, null);
             if (why == Busy.Cooldown) Rest(from);
 
-            Say(string.Format(TheyCannot(why), name));
+            Say(Messages.Named(TheyCannot(why), name));
             Sound.Play(Sound.Cue.CameToNothing);
         }
 
@@ -789,8 +789,8 @@ namespace Sparring
             // Ends nobody won get their own word here; one somebody won is announced to everyone
             // by the side that lost, so those say nothing extra on this screen.
             if (reason == EndReason.OutOfRange) Say(Messages.OutOfRing);
-            else if (reason == EndReason.Withdrew && name.Length > 0) Say(string.Format(Messages.TheyWithdrew, name));
-            else if (reason == EndReason.LeaseLapsed && name.Length > 0) Say(string.Format(Messages.LostTrack, name));
+            else if (reason == EndReason.Withdrew && name.Length > 0) Say(Messages.Named(Messages.TheyWithdrew, name));
+            else if (reason == EndReason.LeaseLapsed && name.Length > 0) Say(Messages.Named(Messages.LostTrack, name));
 
             // A death already makes its own noise, and an ending somebody won has the victory.
             if (!decided && reason != EndReason.Died) Sound.Play(Sound.Cue.CameToNothing);
@@ -960,7 +960,7 @@ namespace Sparring
             var me = Player.m_localPlayer;
             if (me == null) return;
 
-            if (Active) { Say(string.Format(Messages.AlreadyDueling, _opponentName)); return; }
+            if (Active) { Say(Messages.Named(Messages.AlreadyDueling, _opponentName)); return; }
 
             Practising = true;
             Lease.AllowSelfPair = true;
@@ -983,7 +983,7 @@ namespace Sparring
             if (_lastFoe.IsNone()) { Say(Messages.NeverDueled); return; }
 
             var zdo = ZDOMan.instance?.GetZDO(_lastFoe);
-            if (zdo == null) { Say(string.Format(Messages.NotNearby, _lastFoeName)); return; }
+            if (zdo == null) { Say(Messages.Named(Messages.NotNearby, _lastFoeName)); return; }
 
             foreach (var player in Player.GetAllPlayers())
             {
@@ -993,7 +993,7 @@ namespace Sparring
                     return;
                 }
             }
-            Say(string.Format(Messages.NotNearby, _lastFoeName));
+            Say(Messages.Named(Messages.NotNearby, _lastFoeName));
         }
 
         public static void Reset()
@@ -1060,7 +1060,7 @@ namespace Sparring
             _outgoing = ZDOID.None;
             _outgoingName = "";
             _outgoingRadius = 0f;
-            if (format != null) Say(string.Format(format, arg));
+            if (format != null) Say(Messages.Named(format, arg));
         }
 
         private static void ClearIncoming(string format, string arg)
@@ -1068,7 +1068,7 @@ namespace Sparring
             _incoming = ZDOID.None;
             _incomingName = "";
             _incomingRadius = 0f;
-            if (format != null) Say(string.Format(format, arg));
+            if (format != null) Say(Messages.Named(format, arg));
         }
 
         internal static void Say(string text, MessageHud.MessageType type = MessageHud.MessageType.Center)
