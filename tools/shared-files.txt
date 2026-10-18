@@ -1,0 +1,20 @@
+# Files Sparring shares with Bindrune, the same in both but for the mod's name.
+# tools/check-shared.sh compares each with Bindrune's copy, and the pre-push hook runs it.
+# A file that differs by design (the self-test's report, the standards tests that name each
+# mod's own rules, what Reset keeps, the publish script's store categories) is not listed.
+# Columns are separated by a tab.
+names	Sparring	Bindrune
+tests/Sparring.Standards/CommentStandardTests.cs	tests/Bindrune.Standards/CommentStandardTests.cs
+tests/Sparring.Standards/FileAndDocStandardTests.cs	tests/Bindrune.Standards/FileAndDocStandardTests.cs
+tests/Sparring.Standards/LanguageTextStandardTests.cs	tests/Bindrune.Standards/LanguageTextStandardTests.cs
+tests/Sparring.Standards/StringStandardTests.cs	tests/Bindrune.Standards/StringStandardTests.cs
+tests/Sparring.Standards/UnitTestReachStandardTests.cs	tests/Bindrune.Standards/UnitTestReachStandardTests.cs
+tests/Sparring.Standards/UnityNullStandardTests.cs	tests/Bindrune.Standards/UnityNullStandardTests.cs
+tests/Sparring.Standards/VersionStandardTests.cs	tests/Bindrune.Standards/VersionStandardTests.cs
+tests/Sparring.Standards/Violations.cs	tests/Bindrune.Standards/Violations.cs
+BuildChecks.props	BuildChecks.props
+global.json	global.json
+.gitattributes	.gitattributes
+.githooks/commit-msg	.githooks/commit-msg
+.githooks/pre-push	.githooks/pre-push
+tools/check-shared.sh	tools/check-shared.sh
