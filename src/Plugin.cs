@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace Sparring
 {
-    [BepInPlugin(Guid, "Sparring", "0.2.2")]
+    [BepInPlugin(Guid, "Sparring", "0.2.3")]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "isimp.Sparring";
