@@ -33,6 +33,14 @@ namespace Sparring
         {
             var word = args.Length > 1 ? args[1].ToLowerInvariant() : "";
 
+            // Switched off, every word says why; only the self-test still answers, to tell what is missing.
+            if (Shutoff.Engaged)
+            {
+                var why = Shutoff.Answer(() => SelfTestHost.Answer(word, args));
+                if (why != null) Duel.Say(why);
+                return;
+            }
+
             switch (word)
             {
                 case "":

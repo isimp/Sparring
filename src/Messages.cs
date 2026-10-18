@@ -60,6 +60,9 @@ namespace Sparring
         // Version
         public const string VersionGap = "Someone challenged you with a different version of Sparring. One of you needs to update.";
 
+        // Switched off
+        public const string Off = "Sparring is off: this version of the game will not take its hook into {0}. Duels stay off until Sparring is updated.";
+
         /// <summary>
         /// A line that takes a name, with the name put in. A name is text, which the PC's language
         /// writes no differently, so the invariant culture only says that nothing depends on it.
@@ -128,6 +131,7 @@ namespace Sparring
                 NeverDueled,
                 Named(NotNearby, name),
                 VersionGap,
+                Named(Off, "Character.CheckDeath"),
             };
         }
     }

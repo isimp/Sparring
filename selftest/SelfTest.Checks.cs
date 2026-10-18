@@ -26,6 +26,8 @@ namespace Sparring
         /// </summary>
         private static void Hooks(List<SelfTestReport.Check> checks)
         {
+            Add(checks, "Hooks", "Sparring is on", !Shutoff.Engaged, Shutoff.Engaged ? Shutoff.Message : "every hook went in");
+
             var patched = Harmony.GetAllPatchedMethods().Where(m => Owned(m) != Kinds.None).ToList();
 
             Hook(checks, patched, typeof(Character), "CheckDeath", Kinds.Prefix, "a killing blow from your opponent can become a yield");

@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using HarmonyLib;
 
 namespace Sparring
@@ -257,6 +260,27 @@ namespace Sparring
             {
                 Plugin.Log.LogDebug($"Sparring could not close out a duel on death: {ex.Message}");
             }
+        }
+
+        /// <summary>
+        /// The targets of these patches the game no longer has, as "Type.method" separated by
+        /// commas, or null when every one is there. Looked up as Harmony looks them up, for the
+        /// line that says why Sparring is off; a failure on a target that is there names none.
+        /// </summary>
+        internal static string Unresolved()
+        {
+            var missing = new List<string>();
+            foreach (var method in typeof(Patches).GetMethods(BindingFlags.Public | BindingFlags.Static))
+            {
+                foreach (var attribute in method.GetCustomAttributes(typeof(HarmonyPatch), false).OfType<HarmonyPatch>())
+                {
+                    var target = attribute.info;
+                    if (target.declaringType == null || target.methodName == null) continue;
+                    if (AccessTools.DeclaredMethod(target.declaringType, target.methodName, target.argumentTypes) == null)
+                        missing.Add(target.declaringType.Name + "." + target.methodName);
+                }
+            }
+            return missing.Count > 0 ? string.Join(", ", missing.Distinct()) : null;
         }
 
         /// <summary>

@@ -37,6 +37,9 @@ namespace Sparring
 
         public bool Answer(string word, Terminal.ConsoleEventArgs args)
         {
+            // While Sparring is off only the checks that read run; /duel says why for the rest.
+            if (Shutoff.Engaged && word != "selftest") return false;
+
             switch (word)
             {
                 case "selftest":
@@ -80,7 +83,9 @@ namespace Sparring
             var checks = new List<SelfTestReport.Check>();
             var finished = false;
 
-            Duel.Say("Sparring self-test: stand still somewhere safe. It takes about half a minute and knocks you down three times.");
+            Duel.Say(Shutoff.Engaged
+                ? "Sparring self-test: Sparring is off, so only the checks that read run."
+                : "Sparring self-test: stand still somewhere safe. It takes about half a minute and knocks you down three times.");
 
             try
             {
@@ -90,24 +95,32 @@ namespace Sparring
                 Guard(checks, "Ring", Ring);
                 Guard(checks, "Rules", Rules);
 
-                // Run step by step here rather than as a coroutine of its own, so a fault inside
-                // it still reaches the report instead of stopping the run without a word.
-                var duel = Lifecycle(checks);
-                while (true)
+                if (Shutoff.Engaged)
                 {
-                    object step;
-                    try
+                    // With no hook to catch it, a fall to zero would be a real death.
+                    checks.Add(new SelfTestReport.Check("Duel", "the duels against yourself", Result.Info, "left out, since Sparring is off"));
+                }
+                else
+                {
+                    // Run step by step here rather than as a coroutine of its own, so a fault inside
+                    // it still reaches the report instead of stopping the run without a word.
+                    var duel = Lifecycle(checks);
+                    while (true)
                     {
-                        if (!duel.MoveNext()) break;
-                        step = duel.Current;
+                        object step;
+                        try
+                        {
+                            if (!duel.MoveNext()) break;
+                            step = duel.Current;
+                        }
+                        catch (Exception ex)
+                        {
+                            // The failure is the check's result, told in the report as a fail.
+                            checks.Add(new SelfTestReport.Check("Duel", "the duel against yourself ran to the end", Result.Fail, Fault(ex)));
+                            break;
+                        }
+                        yield return step;
                     }
-                    catch (Exception ex)
-                    {
-                        // The failure is the check's result, told in the report as a fail.
-                        checks.Add(new SelfTestReport.Check("Duel", "the duel against yourself ran to the end", Result.Fail, Fault(ex)));
-                        break;
-                    }
-                    yield return step;
                 }
 
                 finished = true;

@@ -275,8 +275,17 @@ namespace Sparring
             _challengeSound.SettingChanged += (s, e) => Sound.Forget();
 
             _harmony = new Harmony(Guid);
-            _harmony.PatchAll(typeof(Patches));
+            try
+            {
+                _harmony.PatchAll(typeof(Patches));
+            }
+            catch (Exception ex)
+            {
+                // StandDown tells it in the log and switches Sparring off as a whole.
+                StandDown(ex);
+            }
 
+            // Registered whether or not the hooks went in, so /duel can say why Sparring is off.
             Commands.Register();
 
             Log.LogInfo("Sparring loaded.");
@@ -302,8 +311,41 @@ namespace Sparring
             _harmony?.UnpatchSelf();
         }
 
+        /// <summary>
+        /// Switches Sparring off as a whole after a hook the game would not take (see
+        /// <see cref="Shutoff"/>): the hooks that did go in come out again, so none is left
+        /// half-working, and the log says what the game changed.
+        /// </summary>
+        private void StandDown(Exception failure)
+        {
+            try
+            {
+                _harmony.UnpatchSelf();
+            }
+            catch (Exception ex)
+            {
+                // Any hook left in reads the lease, which a switched-off Sparring never writes.
+                Log.LogWarning($"Sparring could not take its hooks out again: {ex.Message}");
+            }
+
+            string what = null;
+            try
+            {
+                what = Patches.Unresolved();
+            }
+            catch (Exception ex)
+            {
+                Log.LogDebug($"Sparring could not tell which hook the game refused: {ex.Message}");
+            }
+
+            Shutoff.Engage(what);
+            Log.LogError($"{Shutoff.Message} No duel can start, and every hook Sparring had put in is out again. {failure}");
+        }
+
         private void Update()
         {
+            if (Shutoff.Engaged) return;
+
             try
             {
                 Sound.Prepare();
@@ -321,6 +363,8 @@ namespace Sparring
 
         private void OnGUI()
         {
+            if (Shutoff.Engaged) return;
+
             DuelHud.Warm();
             DuelHud.Draw();
         }
