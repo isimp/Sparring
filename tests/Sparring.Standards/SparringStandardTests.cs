@@ -13,9 +13,11 @@ namespace Sparring.Standards
     /// Where Sparring changes the game, every patch is declared in <c>Patches</c> and all of them go
     /// in together, with one <c>PatchAll(typeof(Patches))</c>. A duel's protection is several patches
     /// working as one, and half of them would be worse than none: blows let through between two
-    /// players with no yield to catch the last one would make a duel a real fight. A game update that
-    /// moves one target stops the plugin loading at all, and the self-test's Hooks part names the
-    /// one that is missing. <c>Character.RPC_Damage</c> is never patched: the victim's game decides
+    /// players with no yield to catch the last one would make a duel a real fight. Harmony looks up
+    /// every target of the class before it applies any, so a target a game update moved fails the
+    /// patching with none applied; <c>Awake</c> stops there, Unity disables a component whose
+    /// <c>Awake</c> throws, and nothing of Sparring runs, /duel and the self-test included, while
+    /// the BepInEx log names the target. <c>Character.RPC_Damage</c> is never patched: the victim's game decides
     /// a hit as it always has, so a friendly area effect such as the Staff of Protection's shield
     /// reaches other players exactly as it does without the mod.
     /// </summary>
