@@ -185,7 +185,7 @@ namespace Sparring
             var me = Player.m_localPlayer;
             if (me == null) return;
 
-            var why = Duel.Readiness(me, Plugin.ArenaRadius);
+            var why = Duel.Readiness(Plugin.ArenaRadius);
             if (why == Busy.None) checks.Add(new SelfTestReport.Check("Rules", "you are read as free to duel", Result.Pass, ""));
             else checks.Add(new SelfTestReport.Check("Rules", "you are read as free to duel", Result.Warn,
                 "read as " + why + "; stand still, out of combat with PvP off, and run it again"));

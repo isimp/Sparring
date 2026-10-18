@@ -208,8 +208,25 @@ namespace Sparring
         public static bool ArePaired(Character a, Character b)
         {
             if (a == null || b == null || a == b) return false;
-            if (!Corroborated(a, out var opponent)) return false;
-            return opponent == b.GetZDOID();
+            var mine = ZdoOf(a);
+            if (mine == null || ZDOMan.instance == null) return false;
+            return Paired(mine.m_uid, b.GetZDOID(), Find, Now, AllowSelfPair);
+        }
+
+        /// <summary>A lease as the ZDO this game has for the id holds it, or none for a ZDO it cannot resolve.</summary>
+        private static Claim<ZDOID>? Find(ZDOID id) => ZDOMan.instance.GetZDO(id) is ZDO zdo ? ClaimOf(zdo) : (Claim<ZDOID>?)null;
+
+        /// <summary>
+        /// Whether these two are each other's opponent, by both leases as <paramref name="find"/>
+        /// reads them (see <see cref="Agreed"/>). Nobody is paired with themselves this way, not even
+        /// in practice, so a practice duel opens no attack on yourself.
+        /// </summary>
+        internal static bool Paired<TId>(TId a, TId b, Func<TId, Claim<TId>?> find, double now, bool allowSelfPair)
+            where TId : struct, IEquatable<TId>
+        {
+            if (a.Equals(b)) return false;
+            var mine = find(a);
+            return mine != null && Agreed(a, mine.Value, find, now, allowSelfPair, out var opponent) && opponent.Equals(b);
         }
 
         /// <summary>

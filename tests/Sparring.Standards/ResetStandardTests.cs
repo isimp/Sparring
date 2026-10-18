@@ -9,11 +9,11 @@ namespace Sparring.Standards
 {
     /// <summary>
     /// A class with a Reset() forgets all it holds there but what it keeps on purpose, named in
-    /// <see cref="Kept"/> with why: every other static field that can change, and every static
-    /// property with a setter, is assigned or cleared in Reset() or a method of the class it calls.
-    /// <c>Duel.Reset</c> runs whenever there is no body, between a death and the respawn and on
-    /// leaving a world, so a field it misses would carry a duel or a challenge across a death or
-    /// into the next world. A readonly collection counts only where some code changes what it
+    /// <see cref="Kept"/> with why: every other field that can change, and every property with a
+    /// setter, is assigned or cleared in Reset() or a method of the class it calls; the static ones
+    /// for a static Reset(), the instance's own for an instance's. The duel flow's Reset runs
+    /// whenever there is no body, between a death and the respawn and on leaving a world, so a
+    /// field it misses would carry a duel or a challenge across a death or into the next world. A readonly collection counts only where some code changes what it
     /// holds; one filled where it is declared and only read is a table, not state. Events are left
     /// out: their handlers are other classes', signed up once.
     /// </summary>
@@ -22,10 +22,10 @@ namespace Sparring.Standards
         /// <summary>What a Reset() keeps on purpose, as "Type.member", each with why.</summary>
         private static readonly Dictionary<string, string> Kept = new Dictionary<string, string>
         {
-            ["Duel._lastFoe"] = "/duel rematch still finds the last opponent after a death and the respawn, between which Reset runs",
-            ["Duel._lastFoeName"] = "the last opponent's name, which the same rematch says when they are not nearby",
-            ["Duel._lastRadius"] = "the last duel's ring, so a rematch after a respawn proposes the same one",
-            ["Duel.LastEnd"] = "how the last duel ended stays readable until another one ends",
+            ["DuelFlow._lastFoe"] = "/duel rematch still finds the last opponent after a death and the respawn, between which Reset runs",
+            ["DuelFlow._lastFoeName"] = "the last opponent's name, which the same rematch says when they are not nearby",
+            ["DuelFlow._lastRadius"] = "the last duel's ring, so a rematch after a respawn proposes the same one",
+            ["DuelFlow.LastEnd"] = "how the last duel ended stays readable until another one ends",
         };
 
         /// <summary>The methods that empty a collection in place.</summary>
@@ -47,13 +47,13 @@ namespace Sparring.Standards
                 var changed = Changed(compilation);
                 foreach (var type in Types(compilation.GlobalNamespace))
                 {
-                    var reset = type.GetMembers("Reset").OfType<IMethodSymbol>().FirstOrDefault(m => m.IsStatic && m.Parameters.Length == 0);
+                    var reset = type.GetMembers("Reset").OfType<IMethodSymbol>().FirstOrDefault(m => m.Parameters.Length == 0);
                     if (reset == null) continue;
 
                     var forgotten = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
                     Walk(compilation, reset, type, new HashSet<IMethodSymbol>(SymbolEqualityComparer.Default), forgotten);
 
-                    foreach (var held in Held(type, changed).Where(h => !forgotten.Contains(h) && !Kept.ContainsKey(type.Name + "." + h.Name)))
+                    foreach (var held in Held(type, changed, reset.IsStatic).Where(h => !forgotten.Contains(h) && !Kept.ContainsKey(type.Name + "." + h.Name)))
                         found.Add(type.Name + "." + held.Name + " (Reset() at " + Where(reset) + ")");
                 }
             }
@@ -70,12 +70,12 @@ namespace Sparring.Standards
                 var changed = Changed(compilation);
                 foreach (var type in Types(compilation.GlobalNamespace))
                 {
-                    var reset = type.GetMembers("Reset").OfType<IMethodSymbol>().FirstOrDefault(m => m.IsStatic && m.Parameters.Length == 0);
+                    var reset = type.GetMembers("Reset").OfType<IMethodSymbol>().FirstOrDefault(m => m.Parameters.Length == 0);
                     if (reset == null) continue;
 
                     var forgotten = new HashSet<ISymbol>(SymbolEqualityComparer.Default);
                     Walk(compilation, reset, type, new HashSet<IMethodSymbol>(SymbolEqualityComparer.Default), forgotten);
-                    foreach (var held in Held(type, changed).Where(h => !forgotten.Contains(h))) found.Remove(type.Name + "." + held.Name);
+                    foreach (var held in Held(type, changed, reset.IsStatic).Where(h => !forgotten.Contains(h))) found.Remove(type.Name + "." + held.Name);
                 }
             }
             Violations.None("are named as kept by Reset() but forgotten there or not held at all", found);
@@ -88,15 +88,15 @@ namespace Sparring.Standards
             Violations.None("are kept by Reset() with no reason given", found);
         }
 
-        /// <summary>What a class holds that can change: static fields not constant, readonly ones only when they hold a collection some code changes, and static properties with a setter.</summary>
-        private static IEnumerable<ISymbol> Held(INamedTypeSymbol type, HashSet<ISymbol> changed)
+        /// <summary>What a class holds that can change, static or the instance's as its Reset() is: fields not constant, readonly ones only when they hold a collection some code changes, and properties with a setter.</summary>
+        private static IEnumerable<ISymbol> Held(INamedTypeSymbol type, HashSet<ISymbol> changed, bool isStatic)
         {
             foreach (var member in type.GetMembers())
             {
-                if (member is IFieldSymbol field && field.IsStatic && !field.IsConst && !field.IsImplicitlyDeclared &&
+                if (member is IFieldSymbol field && field.IsStatic == isStatic && !field.IsConst && !field.IsImplicitlyDeclared &&
                     (!field.IsReadOnly || (IsCollection(field.Type) && changed.Contains(field))))
                     yield return field;
-                else if (member is IPropertySymbol property && property.IsStatic && property.SetMethod != null)
+                else if (member is IPropertySymbol property && property.IsStatic == isStatic && property.SetMethod != null)
                     yield return property;
             }
         }

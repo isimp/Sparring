@@ -35,7 +35,7 @@ namespace Sparring
                 if (player.IsDead() || player.GetHealth() > 0f) return true;
                 if (!Duel.ShouldSurvive(player)) return true;
 
-                Duel.YieldTo(player);
+                Duel.YieldTo();
                 return false;
             }
             catch (Exception ex)
