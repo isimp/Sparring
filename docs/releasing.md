@@ -17,7 +17,7 @@ Each store needs a token stored as a repository secret. The workflow checks for 
 
 1. Set the new version in `Sparring.csproj` (`<Version>`), `src/Plugin.cs` (the `BepInPlugin` attribute) and `packaging/manifest.json` (`version_number`). The workflow checks that all three agree.
 2. Add a CHANGELOG entry. It ships in the package and appears on the mod pages.
-3. Push, and wait for the Build workflow to pass.
+3. Run the self-test in game with a development build (see [technical.md](technical.md), Self-test) and read its report, and check by hand what it cannot reach (see below). Push, and wait for the Build workflow to pass. The self-test is built there too, and never packaged.
 4. Run the Release workflow from the Actions tab. It asks for the version (without `v`), optional release notes, the draft flag, which stores to publish to (both, Hexium only or Thunderstore only), the team, and each store's categories.
 
 The workflow then runs these steps in order:
@@ -35,6 +35,15 @@ The workflow then runs these steps in order:
 | Thunderstore | Uploads and submits the version, if selected. |
 
 If a publish step fails, fix the cause and run the workflow again with the same version and only the store that failed. The GitHub release is updated rather than duplicated, and each store refuses a version it already has.
+
+## Checked by hand
+
+Everything that takes two players reaches beyond one game, and no test runs it for real: the unit tests hold the rules each side applies, and the self-test fights only against yourself. Before a release whose changes touch one, check it in game with a second player, both on the new build:
+
+- A challenge accepted, the countdown, a fight to a yield, and the card on both sides with both halves filled in.
+- A challenge declined, withdrawn, walked away from, and repeated too soon, each told on both sides.
+- A challenge to a player in combat, with PvP on or with something hostile about, turned down with the reason.
+- Leaving the ring during the countdown and after the fight began, and the announcement reaching an onlooker running Sparring.
 
 ## Categories
 
