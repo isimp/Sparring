@@ -40,7 +40,10 @@ namespace Sparring
         /// </summary>
         internal static bool AllowSelfPair;
 
-        /// <summary>Server time, or 0 before we are connected — which reads as "every lease expired".</summary>
+        /// <summary>
+        /// Server time in seconds, or 0 before there is a network clock. Zero is earlier than any
+        /// start time, so no countdown reads as finished then.
+        /// </summary>
         public static double Now => ZNet.instance != null ? ZNet.instance.GetTimeSeconds() : 0.0;
 
         /// <summary>
@@ -52,8 +55,11 @@ namespace Sparring
             if (zdo == null || !zdo.IsOwner()) return;
 
             zdo.Set(KeyOpponent, opponent);
-            zdo.Set(KeyUntil, (long)((Now + LeaseSeconds) * 1000.0));
+            zdo.Set(KeyUntil, UntilFor(Now));
         }
+
+        /// <summary>When a lease stamped at this server time runs out, in the milliseconds the ZDO stores.</summary>
+        internal static long UntilFor(double now) => (long)((now + LeaseSeconds) * 1000.0);
 
         /// <summary>
         /// The things about a duel both sides have to agree on exactly: where the ring is, how big
@@ -68,14 +74,21 @@ namespace Sparring
             public long StartAtMs;
 
             /// <summary>Seconds until blows count, or zero once they do.</summary>
-            public double CountdownLeft => Math.Max(0.0, StartAtMs / 1000.0 - Now);
+            public double CountdownLeft => CountdownLeftAt(Now);
+
+            /// <summary>Whether blows count by now; see <see cref="BegunAt"/>.</summary>
+            public bool Begun => BegunAt(Now);
+
+            /// <summary>Seconds until blows count at this server time, or zero once they do.</summary>
+            internal double CountdownLeftAt(double now) => Math.Max(0.0, StartAtMs / 1000.0 - now);
 
             /// <summary>
-            /// Terms we never received read as "not begun", not as "begun long ago". An absent
-            /// start time is zero, and zero is in the past — so this asks for a real one first,
-            /// and a duel whose terms never arrived is one in which no blow ever counts.
+            /// Whether blows count at this server time. Terms we never received read as "not
+            /// begun", not as "begun long ago". An absent start time is zero, and zero is in the
+            /// past — so this asks for a real one first, and a duel whose terms never arrived is one
+            /// in which no blow ever counts.
             /// </summary>
-            public bool Begun => StartAtMs > 0L && Now * 1000.0 >= StartAtMs;
+            internal bool BegunAt(double now) => StartAtMs > 0L && now * 1000.0 >= StartAtMs;
         }
 
         /// <summary>
@@ -122,49 +135,66 @@ namespace Sparring
             zdo.Set(KeyRadius, 0f);
         }
 
-        /// <summary>
-        /// One side's stamp, if it is still inside its lease. Says nothing about whether the other
-        /// side agrees — for that, use <see cref="Corroborated(ZDO, out ZDOID)"/>.
-        /// </summary>
-        private static bool Live(ZDO zdo, out ZDOID opponent)
-        {
-            opponent = ZDOID.None;
-            if (zdo == null) return false;
-
-            var until = zdo.GetLong(KeyUntil, 0L);
-            if (until <= 0L) return false;
-            if (Now * 1000.0 >= until) return false;
-
-            opponent = zdo.GetZDOID(KeyOpponent);
-            return !opponent.IsNone();
-        }
+        /// <summary>One side's lease as its ZDO holds it. A lease never written reads as naming nobody, with no expiry.</summary>
+        private static Claim<ZDOID> ClaimOf(ZDO zdo) => new Claim<ZDOID>(zdo.GetZDOID(KeyOpponent), zdo.GetLong(KeyUntil, 0L));
 
         /// <summary>
-        /// Whether this ZDO is in a duel that its opponent agrees to: both leases unexpired, and
-        /// each naming the other. A one-sided stamp counts for nothing, so writing your own ZDO
-        /// cannot buy you anything on its own.
-        ///
-        /// Every uncertainty answers false — an opponent we cannot see, a ZDO we cannot resolve, a
-        /// lease we cannot read. Not knowing means not dueling, which means attackable as usual.
+        /// Whether this ZDO is in a duel that its opponent agrees to, read off both ZDOs as this
+        /// game has them; see <see cref="Agreed"/>. A ZDO this game cannot resolve has no lease.
         /// </summary>
         public static bool Corroborated(ZDO mine, out ZDOID opponentId)
         {
             opponentId = ZDOID.None;
             if (mine == null || ZDOMan.instance == null) return false;
-            if (!Live(mine, out var claimed)) return false;
+
+            return Agreed(mine.m_uid, ClaimOf(mine), id => ZDOMan.instance.GetZDO(id) is ZDO theirs ? ClaimOf(theirs) : (Claim<ZDOID>?)null,
+                Now, AllowSelfPair, out opponentId);
+        }
+
+        /// <summary>
+        /// Whether the holder of <paramref name="mine"/> is in a duel its opponent agrees to: both
+        /// leases unexpired at this server time, and each naming the other. A one-sided stamp counts
+        /// for nothing, so writing your own ZDO cannot buy you anything on its own.
+        ///
+        /// Every uncertainty answers false — an opponent <paramref name="find"/> cannot see, a lease
+        /// naming nobody, one that has run out. Not knowing means not dueling, which means
+        /// attackable as usual. Nobody is the id's default, as it is for a ZDOID.
+        /// </summary>
+        internal static bool Agreed<TId>(TId holder, in Claim<TId> mine, Func<TId, Claim<TId>?> find, double now, bool allowSelfPair, out TId opponent)
+            where TId : struct, IEquatable<TId>
+        {
+            opponent = default;
+            if (!mine.LiveAt(now)) return false;
 
             // A lease naming its own holder agrees with itself, which would let a single client
             // grant itself everything a duel grants. Only the practice duel, which has nobody else
             // to pair with, is allowed to do it.
-            if (claimed == mine.m_uid && !AllowSelfPair) return false;
+            var claimed = mine.Opponent;
+            if (claimed.Equals(holder) && !allowSelfPair) return false;
 
-            var theirs = ZDOMan.instance.GetZDO(claimed);
-            if (theirs == null) return false;
-            if (!Live(theirs, out var namedBack)) return false;
-            if (namedBack != mine.m_uid) return false;
+            var theirs = find(claimed);
+            if (theirs == null || !theirs.Value.LiveAt(now)) return false;
+            if (!theirs.Value.Opponent.Equals(holder)) return false;
 
-            opponentId = claimed;
+            opponent = claimed;
             return true;
+        }
+
+        /// <summary>
+        /// A start time off the network decides when we may be hit, so it does not get to be
+        /// arbitrary. Far in the future would be a duel that never starts and a ring that never
+        /// lifts; in the past would skip the countdown entirely. Anything outside a sane window,
+        /// from now to ten seconds past a full countdown, becomes a fresh countdown from now.
+        /// </summary>
+        internal static long SaneStart(long startAtMs, double now, double countdownSeconds)
+        {
+            var nowMs = now * 1000.0;
+            var ceiling = nowMs + (countdownSeconds + 10.0) * 1000.0;
+
+            if (startAtMs < nowMs || startAtMs > ceiling)
+                return (long)(nowMs + countdownSeconds * 1000.0);
+
+            return startAtMs;
         }
 
         /// <summary>Convenience over <see cref="Corroborated(ZDO, out ZDOID)"/> for a live character.</summary>
@@ -240,5 +270,31 @@ namespace Sparring
             return zdo?.GetOwner() ?? 0L;
         }
 
+    }
+
+    /// <summary>
+    /// One fighter's lease as read off their ZDO: whom it names, and until when in the server-time
+    /// milliseconds the ZDO stores. Kept apart from the ZDO so the rule that two of them make a
+    /// duel (<see cref="Lease.Agreed"/>) can be checked without a game.
+    /// </summary>
+    internal readonly struct Claim<TId> where TId : struct, IEquatable<TId>
+    {
+        internal Claim(TId opponent, long untilMs)
+        {
+            Opponent = opponent;
+            UntilMs = untilMs;
+        }
+
+        /// <summary>Whom the lease names; the id's default for nobody.</summary>
+        internal TId Opponent { get; }
+
+        /// <summary>When the lease runs out, or zero for one never written or cleared.</summary>
+        internal long UntilMs { get; }
+
+        /// <summary>
+        /// Whether the lease still holds at this server time. Says nothing about whether the other
+        /// side agrees; for that, see <see cref="Lease.Agreed"/>.
+        /// </summary>
+        internal bool LiveAt(double now) => UntilMs > 0L && now * 1000.0 < UntilMs && !Opponent.Equals(default(TId));
     }
 }

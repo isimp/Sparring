@@ -67,7 +67,7 @@ namespace Sparring
         /// </summary>
         private const float AnnounceGap = 3f;
 
-        private static readonly Dictionary<long, float> _lastAnnounce = new Dictionary<long, float>();
+        private static readonly Throttle _announces = new Throttle(AnnounceGap);
 
         /// <summary>
         /// The shape of these messages, bumped whenever one of them changes.
@@ -110,7 +110,7 @@ namespace Sparring
             rpc.Register<ZDOID, float, int, float>(Tally, OnTally);
             rpc.Register<ZDOID, int>(Refuse, OnBusy);
             _registeredOn = rpc;
-            _lastAnnounce.Clear();
+            _announces.Clear();
         }
 
         public static void SendChallenge(Player target, float radius)
@@ -169,7 +169,7 @@ namespace Sparring
 
         private static void OnBusy(long sender, ZDOID from, int why)
         {
-            var reason = Enum.IsDefined(typeof(Busy), why) ? (Busy)why : Busy.Occupied;
+            var reason = BusyFromWire(why);
             Duel.ReceiveBusy(from, reason);
         }
 
@@ -221,7 +221,7 @@ namespace Sparring
 
         private static void OnResult(long sender, ZDOID from, int reason)
         {
-            Duel.ReceiveResult(from, Clamp(reason));
+            Duel.ReceiveResult(from, ReasonFromWire(reason));
         }
 
         /// <summary>
@@ -253,11 +253,9 @@ namespace Sparring
         {
             // An announcement is a broadcast any client can send, and it lands in everyone's chat.
             // Rate-limited per sender so it cannot be used to flood it.
-            var now = Time.realtimeSinceStartup;
-            if (_lastAnnounce.TryGetValue(sender, out var at) && now - at < AnnounceGap) return;
-            _lastAnnounce[sender] = now;
+            if (!_announces.Allows(sender, Time.realtimeSinceStartup)) return;
 
-            var why = Clamp(reason);
+            var why = ReasonFromWire(reason);
             Announcer.Show(winner, loser, why);
 
             // Only a duel somebody actually won gets a celebration. Ending because one of them
@@ -267,11 +265,38 @@ namespace Sparring
 
         /// <summary>
         /// Anything off the wire is somebody else's data, so a reason outside the enum becomes the
-        /// vaguest one rather than an undefined value cast into it.
+        /// vaguest one rather than an undefined value cast into it: a lapsed duel, which has no
+        /// winner.
         /// </summary>
-        private static EndReason Clamp(int reason)
+        internal static EndReason ReasonFromWire(int sent) =>
+            Enum.IsDefined(typeof(EndReason), sent) ? (EndReason)sent : EndReason.LeaseLapsed;
+
+        /// <summary>The same for a refusal, whose vaguest reason is that the other player is occupied.</summary>
+        internal static Busy BusyFromWire(int sent) =>
+            Enum.IsDefined(typeof(Busy), sent) ? (Busy)sent : Busy.Occupied;
+    }
+
+    /// <summary>
+    /// Lets through one message from each sender per gap, in seconds. A message turned away does
+    /// not restart the wait, so a sender who keeps trying is heard again once the gap has passed.
+    /// </summary>
+    internal sealed class Throttle
+    {
+        private readonly float _gap;
+        private readonly Dictionary<long, float> _last = new Dictionary<long, float>();
+
+        internal Throttle(float gap) => _gap = gap;
+
+        /// <summary>Whether a message from this sender at this moment is let through, noting it if so.</summary>
+        internal bool Allows(long sender, float now)
         {
-            return Enum.IsDefined(typeof(EndReason), reason) ? (EndReason)reason : EndReason.LeaseLapsed;
+            if (_last.TryGetValue(sender, out var at) && now - at < _gap) return false;
+
+            _last[sender] = now;
+            return true;
         }
+
+        /// <summary>Forgets every sender, as a new session starts.</summary>
+        internal void Clear() => _last.Clear();
     }
 }

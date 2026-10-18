@@ -54,7 +54,7 @@ namespace Sparring
         private static ConfigEntry<bool> _winnerEffect;
         private static ConfigEntry<string> _winnerEmote;
 
-        private static readonly HashSet<string> _alsoClearSet = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private static HashSet<string> _alsoClearSet = Recovery.NameSet(null);
         private static Color _ring = new Color(0.85f, 0.72f, 0.35f, 0.85f);
 
         internal static bool RequireOutOfCombat => _requireOutOfCombat?.Value ?? true;
@@ -92,40 +92,6 @@ namespace Sparring
         internal static bool DuelSounds => _duelSounds?.Value ?? true;
         internal static bool WinnerEffect => _winnerEffect?.Value ?? true;
         internal static string WinnerEmote => (_winnerEmote?.Value ?? "cheer").Trim().ToLowerInvariant();
-
-        /// <summary>
-        /// The hard bounds on a ring, in metres. Constants rather than settings: a radius crosses
-        /// the network and both fighters clamp it, so configurable bounds could clamp the same
-        /// number to two different rings. The proposed size stays configurable, since it only has
-        /// to be right on the machine proposing it.
-        /// </summary>
-        internal const float RadiusFloor = 5f;
-        internal const float RadiusCeiling = 60f;
-
-        /// <summary>
-        /// Holds a proposed ring size to what the mod allows. Applied to the number typed locally
-        /// and to the one that arrives from the other side, because a radius off the network is
-        /// untrusted input: a huge one would protect the fighters across the map, and zero would
-        /// put both permanently outside the ring.
-        /// </summary>
-        internal static float ClampRadius(float radius)
-        {
-            if (radius <= 0f || float.IsNaN(radius)) return ArenaRadius;
-            return Mathf.Clamp(radius, RadiusFloor, RadiusCeiling);
-        }
-
-        /// <summary>
-        /// How far apart the fighters may get before the duel is called off, derived from the ring
-        /// rather than set on its own.
-        ///
-        /// Two people at opposite edges of the ring are two radii apart, so any fixed figure below
-        /// that ends duels that never left the arena. Derived, it cannot disagree with the ring it
-        /// guards.
-        /// </summary>
-        internal static float OpponentRangeFor(float radius)
-        {
-            return radius * 2f + 15f;
-        }
 
         private Harmony _harmony;
         private ConfigSync _sync;
@@ -203,7 +169,7 @@ namespace Sparring
             _arenaRadius = Rule("1 - Duel", "ArenaRadius", 20f,
                 new ConfigDescription("Default ring size in metres, used when /duel is given no number. Leaving the " +
                     "ring ends the duel.",
-                    new AcceptableValueRange<float>(RadiusFloor, RadiusCeiling)));
+                    new AcceptableValueRange<float>(Arena.Floor, Arena.Ceiling)));
             _countdown = Rule("1 - Duel", "CountdownSeconds", 3f,
                 new ConfigDescription("Seconds between accepting and the fight starting. No duel damage is possible " +
                     "before it ends.",
@@ -359,18 +325,7 @@ namespace Sparring
             DuelHud.Draw();
         }
 
-        private static void RebuildAlsoClear()
-        {
-            _alsoClearSet.Clear();
-            var raw = _alsoClear?.Value;
-            if (string.IsNullOrEmpty(raw)) return;
-
-            foreach (var part in raw.Split(','))
-            {
-                var name = part.Trim();
-                if (name.Length > 0) _alsoClearSet.Add(name);
-            }
-        }
+        private static void RebuildAlsoClear() => _alsoClearSet = Recovery.NameSet(_alsoClear?.Value);
 
         /// <summary>Parses the ring colour once rather than per frame, and keeps the old one if it will not parse.</summary>
         private static void RebuildRingColor()

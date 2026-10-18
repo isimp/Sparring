@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace Sparring
@@ -54,19 +53,8 @@ namespace Sparring
         /// </summary>
         private static float _lastRadius;
 
-        /// <summary>
-        /// How long after an invitation ends without a duel before the same two players can
-        /// exchange another. Every shown challenge plays a sound and puts a prompt on screen, so
-        /// without a pause a declined challenger could repeat it as fast as they can type.
-        /// </summary>
-        private const double RepeatSeconds = 15.0;
-
-        /// <summary>
-        /// Players we recently had an invitation with, and when that pause runs out. Kept on both
-        /// sides: the challenger's copy stops an ordinary client at the source, and the challenged
-        /// player's copy stops one that ignores its own.
-        /// </summary>
-        private static readonly Dictionary<ZDOID, double> _resting = new Dictionary<ZDOID, double>();
+        /// <summary>Players we recently had an invitation with that came to nothing, and when each pause runs out.</summary>
+        private static readonly Pauses<ZDOID> _resting = new Pauses<ZDOID>();
 
         public static bool Active => !_opponent.IsNone();
         public static ZDOID Opponent => _opponent;
@@ -207,9 +195,7 @@ namespace Sparring
 
             // Measured against the proposed ring, not the larger distance a live duel tolerates:
             // walking out of the proposed ring is taken as withdrawing.
-            var reach = radius > 0f ? radius : Plugin.ArenaRadius;
-            if (reach < Plugin.RadiusFloor) reach = Plugin.RadiusFloor;
-            return Vector3.Distance(me.transform.position, zdo.GetPosition()) > reach;
+            return Arena.Beyond(Vector3.Distance(me.transform.position, zdo.GetPosition()), radius, Plugin.ArenaRadius);
         }
 
         /// <summary>
@@ -247,14 +233,11 @@ namespace Sparring
 
             // Our own position first. It is the one thing this client knows for certain, and a
             // fighter who has left the ring must not have that read as the other kind of end just
-            // because they have also gone far enough to trip the check below.
-            //
-            // Once blows count, stepping out concedes: the ring is the fight, and leaving it is a
-            // way of leaving the fight. Before that, during the countdown, nothing has been fought
-            // over, so it only calls the duel off.
+            // because they have also gone far enough to trip the check below. What stepping out
+            // means depends on whether blows count yet (Arena.Stray).
             if (DistanceFromCenter(me) > _terms.Radius)
             {
-                reason = _terms.Begun ? EndReason.LeftRing : EndReason.OutOfRange;
+                reason = Arena.Stray(_terms.Begun);
                 return false;
             }
 
@@ -264,7 +247,7 @@ namespace Sparring
             // The opponent's position, which this client only knows second-hand. Leaving the ring
             // on their side is their client's to concede; this only catches an opponent who has
             // gone somewhere no ring could put them, and calls it off.
-            if (Vector3.Distance(me.transform.position, theirs.GetPosition()) > Plugin.OpponentRangeFor(_terms.Radius))
+            if (Vector3.Distance(me.transform.position, theirs.GetPosition()) > Arena.OpponentRange(_terms.Radius))
             {
                 reason = EndReason.OutOfRange;
                 return false;
@@ -326,31 +309,27 @@ namespace Sparring
             var me = Player.m_localPlayer;
             if (me == null || challenger.IsNone()) return;
 
-            radius = Plugin.ClampRadius(radius);
+            radius = Arena.Clamp(radius, Plugin.ArenaRadius);
 
-            // Already on screen. Showing it again would only replay the sound.
-            if (HasInvite && _incoming == challenger) return;
-
-            // Everything that can turn a challenge down is decided here, on the machine it was
-            // sent to, before any sound or prompt. The challenger's own checks are a courtesy that
-            // spares a round trip; these are the ones a modified client cannot skip, and a refusal
-            // here costs the player being challenged nothing — they never see it.
-            var refusal = Refusal(me, challenger, radius);
-            if (refusal == Busy.None && _outgoing == challenger)
+            // Decided here, on the machine it was sent to, before any sound or prompt (Challenges).
+            var arrival = Challenges.Arrive(challenger, Active, _incoming, _outgoing, Resting(challenger),
+                Drifted(me, challenger, radius), () => Readiness(me, radius), out var refusal);
+            switch (arrival)
             {
-                // They challenged us while we were challenging them. Take it as both saying yes.
-                Accept(challenger, name, radius);
-                return;
-            }
+                case Arrival.AlreadyShown:
+                    return;
 
-            if (refusal != Busy.None)
-            {
-                Link.SendBusy(challenger, refusal);
-                return;
+                case Arrival.Crossed:
+                    Accept(challenger, name, radius);
+                    return;
+
+                case Arrival.Refused:
+                    Link.SendBusy(challenger, refusal);
+                    return;
             }
 
             _incoming = challenger;
-            _incomingName = Clean(name);
+            _incomingName = Messages.ShownName(name);
             _incomingRadius = radius;
             _incomingUntil = Lease.Now + Plugin.InviteSeconds;
 
@@ -358,41 +337,22 @@ namespace Sparring
             Sound.Challenge();
         }
 
-        /// <summary>
-        /// Why a challenge from this player should not be shown, or <see cref="Busy.None"/> if it
-        /// should.
-        /// </summary>
-        private static Busy Refusal(Player me, ZDOID challenger, float radius)
+        /// <summary>Whether this player is free to start a duel, and if not, why; see <see cref="Challenges.Readiness"/>.</summary>
+        private static Busy Readiness(Player me, float radius) =>
+            Challenges.Readiness(StandingOf(me), Plugin.RequireOutOfCombat, Plugin.RequireClearGround, () => !GroundIsClear(me, radius));
+
+        /// <summary>What this player's game knows about whether they are free.</summary>
+        private static Standing StandingOf(Player me) => new Standing
         {
-            if (Active) return Busy.Dueling;
-
-            // One offer on screen at a time; a second one is refused rather than replacing it.
-            if (HasInvite && _incoming != challenger) return Busy.Answering;
-
-            if (Resting(challenger)) return Busy.Cooldown;
-            if (Drifted(me, challenger, radius)) return Busy.TooFar;
-
-            return Readiness(me, radius);
-        }
-
-        /// <summary>
-        /// Whether this player is free to start a duel, and if not, why. The same test whether
-        /// they are challenging, being challenged, or accepting, so the three cannot disagree.
-        ///
-        /// Being out of combat is the game's own rule for switching PvP, ten seconds without a
-        /// fight, so a duel cannot be opened as an escape from one already under way. Having PvP
-        /// on is refused because it would expose the fighters to everyone, which is the thing a
-        /// duel is meant to avoid.
-        /// </summary>
-        private static Busy Readiness(Player me, float radius)
-        {
-            if (me.IsDead() || me.InCutscene() || me.IsTeleporting()) return Busy.Occupied;
-            if (me.IsAttached() || me.InBed() || me.IsSleeping()) return Busy.Occupied;
-            if (me.IsPVPEnabled()) return Busy.PvpOn;
-            if (Plugin.RequireOutOfCombat && !me.CanSwitchPVP()) return Busy.InCombat;
-            if (!GroundIsClear(me, radius)) return Busy.CreaturesNear;
-            return Busy.None;
-        }
+            Dead = me.IsDead(),
+            InCutscene = me.InCutscene(),
+            Teleporting = me.IsTeleporting(),
+            Attached = me.IsAttached(),
+            InBed = me.InBed(),
+            Sleeping = me.IsSleeping(),
+            PvpOn = me.IsPVPEnabled(),
+            InCombat = !me.CanSwitchPVP(),
+        };
 
         /// <summary>What to tell this player when they are the one who is not free.</summary>
         private static string YouCannot(Busy why)
@@ -431,8 +391,6 @@ namespace Sparring
         /// </summary>
         private static bool GroundIsClear(Player me, float radius)
         {
-            if (!Plugin.RequireClearGround) return true;
-
             try
             {
                 var reach = radius > 0f ? radius : Plugin.ArenaRadius;
@@ -461,14 +419,14 @@ namespace Sparring
             var theirs = ZDOMan.instance?.GetZDO(challenger);
             if (theirs == null)
             {
-                ClearIncoming(Messages.Unreachable, Clean(name));
+                ClearIncoming(Messages.Unreachable, Messages.ShownName(name));
                 return;
             }
 
             var terms = new Lease.Terms
             {
                 Center = Vector3.Lerp(me.transform.position, theirs.GetPosition(), 0.5f),
-                Radius = Plugin.ClampRadius(radius),
+                Radius = Arena.Clamp(radius, Plugin.ArenaRadius),
                 StartAtMs = (long)((Lease.Now + Plugin.CountdownSeconds) * 1000.0),
             };
 
@@ -531,8 +489,8 @@ namespace Sparring
 
             // The terms are adopted as they arrive, not recomputed. Two machines each working out
             // "the middle" from positions a moment apart would draw two different rings.
-            terms.Radius = Plugin.ClampRadius(terms.Radius);
-            terms.StartAtMs = SaneStart(terms.StartAtMs);
+            terms.Radius = Arena.Clamp(terms.Radius, Plugin.ArenaRadius);
+            terms.StartAtMs = Lease.SaneStart(terms.StartAtMs, Lease.Now, Plugin.CountdownSeconds);
             Sound.Play(Sound.Cue.Accepted);
             BeginWith(responder, name, terms);
         }
@@ -569,30 +527,13 @@ namespace Sparring
             }
         }
 
-        /// <summary>
-        /// A start time off the network decides when we may be hit, so it does not get to be
-        /// arbitrary. Far in the future would be a duel that never starts and a ring that never
-        /// lifts; in the past would skip the countdown entirely. Anything outside a sane window
-        /// becomes a fresh local countdown instead.
-        /// </summary>
-        private static long SaneStart(long startAtMs)
-        {
-            var nowMs = Lease.Now * 1000.0;
-            var ceiling = nowMs + (Plugin.CountdownSeconds + 10.0) * 1000.0;
-
-            if (startAtMs < nowMs || startAtMs > ceiling)
-                return (long)(nowMs + Plugin.CountdownSeconds * 1000.0);
-
-            return startAtMs;
-        }
-
         private static void BeginWith(ZDOID opponent, string name, Lease.Terms terms)
         {
             var me = Player.m_localPlayer;
             if (me == null) return;
 
             _opponent = opponent;
-            _opponentName = string.IsNullOrEmpty(name) ? "your opponent" : Clean(name);
+            _opponentName = string.IsNullOrEmpty(name) ? "your opponent" : Messages.ShownName(name);
             _terms = terms;
             _everPaired = false;
             _unpairedSince = 0.0;
@@ -796,50 +737,20 @@ namespace Sparring
             if (!decided && reason != EndReason.Died) Sound.Play(Sound.Cue.CameToNothing);
         }
 
-        /// <summary>
-        /// Whether a hit carrying no attacker should be read as the opponent's.
-        ///
-        /// Fire, spirit and poison do not land with the blow that carried them. They are put on as
-        /// a status effect, whose periodic damage builds a fresh hit with nobody named on it and
-        /// applies it straight to the victim. Frost and lightning do no damage over time at all, so
-        /// between them <c>Burning</c> — which carries spirit as well as fire — and <c>Poisoned</c>
-        /// are every way an opponent's weapon can still be hurting you after the swing is over.
-        ///
-        /// Inside a duel there is little else either is likely to be, so both are taken as theirs.
-        /// That covers the case this exists for: an arrow that sets you alight and then finishes
-        /// you. The imprecision is that a duel fought standing in a fire credits the fire to your
-        /// opponent, which costs a wrong line on a card and a yield that should have been a death.
-        ///
-        /// Everything else that burns or drowns a person — smoke, lava, cinders, cold, deep water,
-        /// a long fall — keeps its own hit type and is not covered, so none of them stops killing.
-        /// </summary>
-        public static bool OpponentTick(HitData hit)
-        {
-            if (hit == null || hit.HaveAttacker()) return false;
-
-            return hit.m_hitType == HitData.HitType.Burning
-                || hit.m_hitType == HitData.HitType.Poisoned;
-        }
+        /// <summary>Whether a hit carrying no attacker should be read as the opponent's; see <see cref="Survival.OpponentTick"/>.</summary>
+        public static bool OpponentTick(HitData hit) => hit != null && Survival.OpponentTick(hit.HaveAttacker(), hit.m_hitType);
 
         /// <summary>
-        /// Whether a killing blow should become a yield instead. Only the opponent counts, by their
-        /// own hand or by what they set alight: anything else, such as creatures, falls or
-        /// drowning, kills as usual.
+        /// Whether a killing blow should become a yield instead; see <see cref="Survival.ShouldSurvive{TId}"/>.
+        /// The pair is read off the leases as they stand, and the blow off the game's last hit.
         /// </summary>
         public static bool ShouldSurvive(Player me)
         {
-            if (me == null || !Active) return false;
-            if (me != Player.m_localPlayer) return false;
+            if (me == null) return false;
 
-            // Re-read the pair rather than trusting our own state, so a duel this client thinks is
-            // running but the network does not is never a reason to survive a hit.
-            if (!Lease.Corroborated(me, out var confirmed) || confirmed != _opponent) return false;
-
-            var hit = Patches.LastHit(me);
-            if (hit == null) return false;
-
-            var attacker = hit.GetAttacker();
-            return attacker != null ? attacker.GetZDOID() == _opponent : OpponentTick(hit);
+            // Names nobody when the leases agree on no one.
+            Lease.Corroborated(me, out var confirmed);
+            return Survival.ShouldSurvive(me == Player.m_localPlayer, _opponent, confirmed, Survival.BlowOf(Patches.LastHit(me)));
         }
 
         /// <summary>
@@ -1019,40 +930,14 @@ namespace Sparring
         }
 
         /// <summary>Starts the pause before this player and we can exchange another challenge.</summary>
-        private static void Rest(ZDOID other)
-        {
-            if (other.IsNone()) return;
+        private static void Rest(ZDOID other) => _resting.Start(other, Lease.Now);
 
-            var now = Lease.Now;
-            _resting[other] = now + RepeatSeconds;
-
-            // A handful of entries at most in normal play; drop the lapsed ones as new ones arrive.
-            if (_resting.Count <= 16) return;
-            foreach (var key in new List<ZDOID>(_resting.Keys))
-            {
-                if (_resting[key] <= now) _resting.Remove(key);
-            }
-        }
-
-        private static bool Resting(ZDOID other)
-        {
-            return _resting.TryGetValue(other, out var until) && Lease.Now < until;
-        }
+        private static bool Resting(ZDOID other) => _resting.Holds(other, Lease.Now);
 
         private static string MyName()
         {
             var me = Player.m_localPlayer;
             return me != null ? me.GetPlayerName() : "someone";
-        }
-
-        /// <summary>A name off the wire is somebody else's text. Strip markup and cap it.</summary>
-        private static string Clean(string name)
-        {
-            if (string.IsNullOrEmpty(name)) return "Someone";
-
-            name = name.Replace('<', ' ').Replace('>', ' ').Trim();
-            if (name.Length == 0) return "Someone";
-            return name.Length > 32 ? name.Substring(0, 32) : name;
         }
 
         private static void ClearOutgoing(string format, string arg)

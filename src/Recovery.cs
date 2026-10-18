@@ -71,13 +71,24 @@ namespace Sparring
         {
             if (player == null) return;
 
-            // Never downward. Yielding at zero should lift you to the floor value, but winning or
-            // forfeiting at full health must not cost you the difference — the same call serves
-            // every ending, and only some of them involve a player who needs helping up.
-            var floor = Mathf.Max(1f, player.GetMaxHealth() * Mathf.Clamp01(fraction));
-            if (player.GetHealth() >= floor) return;
+            if (Lifted(player.GetHealth(), player.GetMaxHealth(), fraction, out var health)) player.SetHealth(health);
+        }
 
-            player.SetHealth(floor);
+        /// <summary>
+        /// The health a fighter is lifted to: their share of full health, the share held between
+        /// none and whole, and at least one point. Never downward: yielding at zero should lift you
+        /// to the floor, but winning or forfeiting at full health must not cost you the difference —
+        /// the same rule serves every ending, and only some of them involve a player who needs
+        /// helping up. False when the fighter already has as much.
+        /// </summary>
+        internal static bool Lifted(float health, float maxHealth, float fraction, out float lifted)
+        {
+            var share = fraction < 0f ? 0f : fraction > 1f ? 1f : fraction;
+            var floor = maxHealth * share;
+            if (1f > floor) floor = 1f;
+
+            lifted = floor;
+            return !(health >= floor);
         }
 
         private static bool ShouldClear(StatusEffect se)
@@ -88,8 +99,28 @@ namespace Sparring
                 if (harmful.IsAssignableFrom(type)) return true;
             }
 
-            return Plugin.AlsoClear.Count > 0
-                   && (Plugin.AlsoClear.Contains(se.name) || Plugin.AlsoClear.Contains(se.m_name));
+            return Listed(Plugin.AlsoClear, se.name, se.m_name);
         }
+
+        /// <summary>
+        /// The extra effects to clear as the AlsoClear setting names them: separated by commas,
+        /// spaces around each name ignored, and matched whatever their case.
+        /// </summary>
+        internal static HashSet<string> NameSet(string typed)
+        {
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (string.IsNullOrEmpty(typed)) return names;
+
+            foreach (var part in typed.Split(','))
+            {
+                var name = part.Trim();
+                if (name.Length > 0) names.Add(name);
+            }
+            return names;
+        }
+
+        /// <summary>Whether an effect is one of the extra ones named, by its object name or the name the game shows.</summary>
+        internal static bool Listed(HashSet<string> names, string objectName, string displayName) =>
+            names.Count > 0 && (names.Contains(objectName) || names.Contains(displayName));
     }
 }

@@ -68,7 +68,7 @@ namespace Sparring
                 case "preview":
                 {
                     var size = args.Length > 2 && float.TryParse(args[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var m)
-                        ? Plugin.ClampRadius(m)
+                        ? Arena.Clamp(m, Plugin.ArenaRadius)
                         : Plugin.ArenaRadius;
                     Preview.ToggleRing(size);
                     break;
@@ -117,7 +117,7 @@ namespace Sparring
                     // silently starting a duel with a size the person did not mean.
                     if (float.TryParse(word, NumberStyles.Float, CultureInfo.InvariantCulture, out var metres))
                     {
-                        ChallengeWhoeverIsInView(Plugin.ClampRadius(metres));
+                        ChallengeWhoeverIsInView(Arena.Clamp(metres, Plugin.ArenaRadius));
                     }
                     else
                     {

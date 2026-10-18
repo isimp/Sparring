@@ -58,9 +58,12 @@
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
   </ItemGroup>
 
-  <!-- The self-test is a plugin of its own beside Sparring, built from selftest/, and reaches
-       Sparring's internals from there. A release packages Sparring.dll alone. -->
+  <!-- The tests are projects of their own (see tests/), and the self-test is a plugin of its own
+       beside Sparring, built from selftest/, which reaches Sparring's internals from there. A
+       release packages Sparring.dll alone. -->
   <ItemGroup>
+    <Compile Remove="tests/**" />
+    <None Remove="tests/**" />
     <Compile Remove="selftest/**" />
     <InternalsVisibleTo Include="Sparring.SelfTest" />
   </ItemGroup>

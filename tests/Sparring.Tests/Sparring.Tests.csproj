@@ -1,0 +1,51 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Tests for the parts of Sparring that need no game: when two leases make a duel and when one
+       runs out, when the countdown has finished, who is free to duel whom, which blows a duel
+       survives and how it ends, the ring's size, the names and reasons that arrive off the network,
+       and the self-test's report. They run on .NET 8 against the real BepInEx.dll from the local
+       profile, which is not committed, and compile against the metadata-only game assemblies in
+       lib/: at run time they touch only the game's enums from those, which the stubs keep whole, and
+       code that needs the running game is left out below.
+       Run with: dotnet test tests/Sparring.Tests -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>Sparring.Tests</RootNamespace>
+    <NoWarn>$(NoWarn);CS0649</NoWarn>
+    <ProfileDir Condition="'$(ProfileDir)' == ''">$(AppData)\com.kesomannen.gale\valheim\profiles\Default</ProfileDir>
+  </PropertyGroup>
+
+  <!-- All of Sparring but the plugin class, which PluginShim.cs stands in for, against the metadata-only game stubs in
+       lib/: the tests run the parts that need no running game, and the rest only has to load. The files left out are
+       named with why in tests/Sparring.Standards/GameOnlyFiles.cs, which a standards test holds this list to. -->
+  <ItemGroup>
+    <Compile Include="../../src/**/*.cs" Exclude="../../src/Plugin.cs;../../src/ServerSync/**" />
+    <Compile Include="../../selftest/SelfTestReport.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="BepInEx"><HintPath>$(ProfileDir)/BepInEx/core/BepInEx.dll</HintPath></Reference>
+    <Reference Include="0Harmony"><HintPath>$(MSBuildThisFileDirectory)../../lib/0Harmony.dll</HintPath></Reference>
+    <Reference Include="assembly_valheim"><HintPath>$(MSBuildThisFileDirectory)../../lib/assembly_valheim.dll</HintPath></Reference>
+    <Reference Include="assembly_utils"><HintPath>$(MSBuildThisFileDirectory)../../lib/assembly_utils.dll</HintPath></Reference>
+    <Reference Include="UnityEngine"><HintPath>$(MSBuildThisFileDirectory)../../lib/UnityEngine.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.CoreModule"><HintPath>$(MSBuildThisFileDirectory)../../lib/UnityEngine.CoreModule.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.PhysicsModule"><HintPath>$(MSBuildThisFileDirectory)../../lib/UnityEngine.PhysicsModule.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.AudioModule"><HintPath>$(MSBuildThisFileDirectory)../../lib/UnityEngine.AudioModule.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.InputLegacyModule"><HintPath>$(MSBuildThisFileDirectory)../../lib/UnityEngine.InputLegacyModule.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.IMGUIModule"><HintPath>$(MSBuildThisFileDirectory)../../lib/UnityEngine.IMGUIModule.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.TextRenderingModule"><HintPath>$(MSBuildThisFileDirectory)../../lib/UnityEngine.TextRenderingModule.dll</HintPath></Reference>
+    <Reference Include="Unity.TextMeshPro"><HintPath>$(MSBuildThisFileDirectory)../../lib/Unity.TextMeshPro.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.UI"><HintPath>$(MSBuildThisFileDirectory)../../lib/UnityEngine.UI.dll</HintPath></Reference>
+    <Reference Include="UnityEngine.UIModule"><HintPath>$(MSBuildThisFileDirectory)../../lib/UnityEngine.UIModule.dll</HintPath></Reference>
+  </ItemGroup>
+
+</Project>

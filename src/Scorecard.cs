@@ -113,10 +113,7 @@ namespace Sparring
         /// </summary>
         public static void Count(float amount, Character attacker, HitData hit)
         {
-            if (amount <= 0f || !Duel.Active) return;
-
-            // A practice duel has no opponent but itself, so there everything that lands counts.
-            if (!Duel.Practising && !FromOpponent(attacker, hit)) return;
+            if (!Counts(amount, Duel.Active, Duel.Practising, FromOpponent(attacker, hit))) return;
 
             TookTotal += amount;
             TookHits++;
@@ -124,15 +121,25 @@ namespace Sparring
         }
 
         /// <summary>
-        /// Whether a blow was the opponent's doing. Their own hits name them; what they set alight
-        /// arrives later as a tick with nobody named on it, read as theirs by the same rule that
-        /// decides whether such a tick is allowed to kill.
+        /// Whether a blow that landed on us belongs on the card: only while a duel is on, only one
+        /// that did harm, and only the opponent's. A practice duel has no opponent but itself, so
+        /// there everything that lands counts.
+        /// </summary>
+        internal static bool Counts(float amount, bool active, bool practising, bool fromOpponent)
+        {
+            if (amount <= 0f || !active) return false;
+            return practising || fromOpponent;
+        }
+
+        /// <summary>
+        /// Whether a blow was the opponent's doing, read by the same rule that decides whether it
+        /// may be survived (<see cref="Survival.FromOpponent{TId}"/>).
         /// </summary>
         private static bool FromOpponent(Character attacker, HitData hit)
         {
-            return attacker != null
-                ? attacker.GetZDOID() == Duel.Opponent
-                : Duel.OpponentTick(hit);
+            var blow = new Blow<ZDOID>(hit != null && hit.HaveAttacker(),
+                attacker != null ? attacker.GetZDOID() : ZDOID.None, hit != null ? hit.m_hitType : HitData.HitType.Undefined);
+            return Survival.FromOpponent(blow, Duel.Opponent);
         }
 
         /// <summary>Fills the card with plausible numbers, for looking at it without a duel.</summary>

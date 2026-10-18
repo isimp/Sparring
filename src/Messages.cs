@@ -67,6 +67,27 @@ namespace Sparring
         internal static string Named(string line, string name) => string.Format(CultureInfo.InvariantCulture, line, name);
 
         /// <summary>
+        /// A name as it arrives over the network: somebody else's text. Rich-text brackets come
+        /// out, since the chat window and the panel render markup, and a name carrying its own tags
+        /// could otherwise recolour or hide the rest of the line; the length is capped at 32. A
+        /// name with nothing left is empty.
+        /// </summary>
+        internal static string WireName(string name)
+        {
+            if (string.IsNullOrEmpty(name)) return "";
+
+            name = name.Replace('<', ' ').Replace('>', ' ').Trim();
+            return name.Length > 32 ? name.Substring(0, 32) : name;
+        }
+
+        /// <summary>A name off the network as the panel and the messages show it: <see cref="WireName"/>, or "Someone" for none.</summary>
+        internal static string ShownName(string name)
+        {
+            var shown = WireName(name);
+            return shown.Length > 0 ? shown : "Someone";
+        }
+
+        /// <summary>
         /// Every line above, in the order you would meet them, for the preview to walk through.
         /// A line taking a name gets one so it reads as it really would.
         /// </summary>

@@ -24,8 +24,8 @@ namespace Sparring
             {
                 if (Chat.instance == null) return;
 
-                winner = Clean(winner);
-                loser = Clean(loser);
+                winner = Messages.WireName(winner);
+                loser = Messages.WireName(loser);
                 if (winner.Length == 0 || loser.Length == 0) return;
 
                 var line = Compose(winner, loser, reason);
@@ -89,19 +89,6 @@ namespace Sparring
                 default:
                     return $"<color=#b9bfc4>The duel between {winner} and {loser} is over.</color>";
             }
-        }
-
-        /// <summary>
-        /// Names arrive over the network, so they are somebody else's text. Rich-text brackets come
-        /// out — the chat window renders markup, and a name carrying its own tags could otherwise
-        /// recolour or hide the rest of the line — and the length is capped.
-        /// </summary>
-        private static string Clean(string name)
-        {
-            if (string.IsNullOrEmpty(name)) return "";
-
-            name = name.Replace('<', ' ').Replace('>', ' ').Trim();
-            return name.Length > 32 ? name.Substring(0, 32) : name;
         }
     }
 }
