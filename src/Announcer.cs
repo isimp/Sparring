@@ -72,7 +72,7 @@ namespace Sparring
 
         private static AccessTools.FieldRef<Chat, float> _hideTimer;
 
-        private static string Compose(string winner, string loser, EndReason reason)
+        internal static string Compose(string winner, string loser, EndReason reason)
         {
             switch (reason)
             {

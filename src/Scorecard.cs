@@ -71,10 +71,9 @@ namespace Sparring
         /// </summary>
         public static void End(bool show)
         {
-            var begun = Duel.Terms.StartAtMs > 0L ? Duel.Terms.StartAtMs / 1000.0 : _startedAt;
-            Seconds = (float)Math.Max(0.0, Lease.Now - begun);
+            Seconds = (float)Fought(Duel.Terms.StartAtMs, _startedAt, Lease.Now);
 
-            _showUntil = show && (TookHits > 0 || GaveHits > 0)
+            _showUntil = Shows(show, TookHits, GaveHits)
                 ? Time.realtimeSinceStartup + ShowSeconds
                 : 0f;
 
@@ -86,6 +85,22 @@ namespace Sparring
                 Plugin.Log.LogInfo(FormattableString.Invariant($"Sparring card: {Outcome} vs {Against}, took {TookTotal:0.#} over {TookHits}, {Seconds:0.#}s, ") +
                                    (_showUntil > 0f ? "shown." : "withheld."));
             }
+        }
+
+        /// <summary>
+        /// Whether the card goes on screen: only for a duel somebody won, and only with a blow
+        /// landed on one side or the other, since a card of noughts reads as a broken one.
+        /// </summary>
+        internal static bool Shows(bool decided, int took, int gave) => decided && (took > 0 || gave > 0);
+
+        /// <summary>
+        /// How long the duel was fought, in seconds: from the moment blows began to count, or from
+        /// the handshake for a duel with no start time, and never less than none.
+        /// </summary>
+        internal static double Fought(long startAtMs, double startedAt, double now)
+        {
+            var begun = startAtMs > 0L ? startAtMs / 1000.0 : startedAt;
+            return Math.Max(0.0, now - begun);
         }
 
         /// <summary>Their tally of what they took is our tally of what we dealt.</summary>

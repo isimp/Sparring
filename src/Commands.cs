@@ -29,6 +29,43 @@ namespace Sparring
                 Run, isCheat: false, isNetwork: false, onlyServer: false);
         }
 
+        /// <summary>
+        /// What a word after /duel asks for, already in lower case. Several actions answer to more
+        /// than one word. A number is a ring size, read the same way on every PC, so "12,5" is no
+        /// size and gets the hint rather than a ring the player did not mean. Anything else is
+        /// <see cref="Order.Other"/>: the self-test's, when it is installed, or a typo.
+        /// </summary>
+        internal static Order Read(string word, out float metres)
+        {
+            metres = 0f;
+            switch (word)
+            {
+                case "": return Order.Challenge;
+                case "accept": case "yes": return Order.Accept;
+                case "decline": case "no": return Order.Decline;
+                case "cancel": case "withdraw": return Order.Withdraw;
+                case "yield": case "forfeit": case "surrender": return Order.Yield;
+                case "rematch": case "again": return Order.Rematch;
+                case "preview": return Order.Preview;
+                case "status": return Order.Status;
+                case "panels": return Order.Panels;
+                case "testyield": return Order.TestYield;
+                case "testwin": return Order.TestWin;
+                case "testmessages": return Order.TestMessages;
+                case "spar": return Order.Spar;
+                case "testannounce": return Order.TestAnnounce;
+                case "testsound": return Order.TestSound;
+            }
+
+            return float.TryParse(word, NumberStyles.Float, CultureInfo.InvariantCulture, out metres) ? Order.Ring : Order.Other;
+        }
+
+        /// <summary>The ring a preview shows: the size typed, held to the ring's bounds, or the default ring when none is.</summary>
+        internal static float Size(string typed, float fallback) =>
+            typed != null && float.TryParse(typed, NumberStyles.Float, CultureInfo.InvariantCulture, out var metres)
+                ? Arena.Clamp(metres, fallback)
+                : fallback;
+
         private static void Run(Terminal.ConsoleEventArgs args)
         {
             var word = args.Length > 1 ? args[1].ToLowerInvariant() : "";
@@ -41,96 +78,81 @@ namespace Sparring
                 return;
             }
 
-            switch (word)
+            switch (Read(word, out var metres))
             {
-                case "":
+                case Order.Challenge:
                     ChallengeWhoeverIsInView(Plugin.ArenaRadius);
                     break;
 
-                case "accept":
-                case "yes":
+                case Order.Accept:
                     Duel.Accept();
                     break;
 
-                case "decline":
-                case "no":
+                case Order.Decline:
                     Duel.Decline();
                     break;
 
-                case "cancel":
-                case "withdraw":
+                case Order.Withdraw:
                     Duel.Withdraw();
                     break;
 
-                case "yield":
-                case "forfeit":
-                case "surrender":
+                case Order.Yield:
                     Duel.Forfeit();
                     break;
 
-                case "rematch":
-                case "again":
+                case Order.Rematch:
                     Duel.Rematch();
                     break;
 
-                case "preview":
-                {
-                    var size = args.Length > 2 && float.TryParse(args[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var m)
-                        ? Arena.Clamp(m, Plugin.ArenaRadius)
-                        : Plugin.ArenaRadius;
-                    Preview.ToggleRing(size);
+                case Order.Preview:
+                    Preview.ToggleRing(Size(args.Length > 2 ? args[2] : null, Plugin.ArenaRadius));
                     break;
-                }
 
                 // Rehearsals. Two of these put health back and strip debuffs, because that is what
                 // they are rehearsing — which makes them a free heal on any server that leaves
                 // them open. They are shut unless someone deliberately opens them.
-                case "panels":
+                case Order.Panels:
                     if (Debugging()) Preview.ShowPanels();
                     break;
 
-                case "testyield":
+                case Order.TestYield:
                     if (Debugging()) Preview.Yield();
                     break;
 
-                case "testwin":
+                case Order.TestWin:
                     if (Debugging()) Preview.Win();
                     break;
 
-                case "testmessages":
+                case Order.TestMessages:
                     if (Debugging()) Preview.ShowMessages();
                     break;
 
-                case "spar":
+                case Order.Spar:
                     if (Debugging()) Preview.ToggleSparring();
                     break;
 
-                case "testannounce":
+                case Order.TestAnnounce:
                     if (Debugging()) Preview.Announce();
                     break;
 
-                case "testsound":
+                case Order.TestSound:
                     if (Debugging()) Sound.Challenge();
                     break;
 
-                case "status":
+                case Order.Status:
                     Status();
+                    break;
+
+                case Order.Ring:
+                    ChallengeWhoeverIsInView(Arena.Clamp(metres, Plugin.ArenaRadius));
                     break;
 
                 default:
                     // The self-test's words, when it is installed beside a development build.
-                    if (SelfTestHost.Answer(word, args)) break;
-
-                    // A number is a ring size. Anything else is a typo, and saying so beats
-                    // silently starting a duel with a size the person did not mean.
-                    if (float.TryParse(word, NumberStyles.Float, CultureInfo.InvariantCulture, out var metres))
-                    {
-                        ChallengeWhoeverIsInView(Arena.Clamp(metres, Plugin.ArenaRadius));
-                    }
-                    else
-                    {
+                    // Anything else is a typo, and saying so beats silently starting a duel with a
+                    // size the person did not mean.
+                    if (!SelfTestHost.Answer(word, args))
                         Duel.Say("Use /duel, or /duel <metres> to set the ring size. /duel preview shows one where you stand.");
-                    }
                     break;
             }
         }
@@ -182,5 +204,31 @@ namespace Sparring
             else if (Plugin.RulesFromServer) Duel.Say("Not dueling. The duel rules here are the server's.");
             else Duel.Say("Not dueling.");
         }
+    }
+
+    /// <summary>What a word after /duel asks for (<see cref="Commands.Read"/>).</summary>
+    internal enum Order
+    {
+        Challenge,
+        Accept,
+        Decline,
+        Withdraw,
+        Yield,
+        Rematch,
+        Preview,
+        Status,
+        Panels,
+        TestYield,
+        TestWin,
+        TestMessages,
+        Spar,
+        TestAnnounce,
+        TestSound,
+
+        /// <summary>A number: a challenge with that ring size.</summary>
+        Ring,
+
+        /// <summary>Any other word: the self-test's, or a typo.</summary>
+        Other,
     }
 }

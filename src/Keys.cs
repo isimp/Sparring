@@ -13,19 +13,18 @@ namespace Sparring
     /// </summary>
     internal static class Keys
     {
-        private static float _yieldHeldFor;
+        private static readonly YieldHold _yield = new YieldHold();
 
         /// <summary>How far through the yield hold we are, 0 to 1, for the HUD to draw.</summary>
-        public static float YieldProgress =>
-            Plugin.YieldHoldSeconds <= 0f ? 0f : Mathf.Clamp01(_yieldHeldFor / Plugin.YieldHoldSeconds);
+        public static float YieldProgress => _yield.Progress(Plugin.YieldHoldSeconds);
 
-        public static bool YieldHeld => _yieldHeldFor > 0f;
+        public static bool YieldHeld => _yield.Held;
 
         public static void Tick()
         {
             if (!Accepting())
             {
-                _yieldHeldFor = 0f;
+                _yield.Release();
                 return;
             }
 
@@ -35,33 +34,8 @@ namespace Sparring
                 else if (Input.GetKeyDown(Plugin.DeclineKey)) Duel.Decline();
             }
 
-            TickYield();
-        }
-
-        /// <summary>
-        /// Held, not tapped, and only once the fight is actually on. A single keypress deciding a
-        /// duel is one mis-key away from handing someone the win, and letting go before the hold
-        /// completes abandons it — so there is always a way back out of a press you did not mean.
-        /// </summary>
-        private static void TickYield()
-        {
-            if (!Duel.Active || Duel.CountingDown)
-            {
-                _yieldHeldFor = 0f;
-                return;
-            }
-
-            if (!Input.GetKey(Plugin.YieldKey))
-            {
-                _yieldHeldFor = 0f;
-                return;
-            }
-
-            _yieldHeldFor += Time.unscaledDeltaTime;
-            if (_yieldHeldFor < Plugin.YieldHoldSeconds) return;
-
-            _yieldHeldFor = 0f;
-            Duel.Forfeit();
+            var fighting = Duel.Active && !Duel.CountingDown;
+            if (_yield.Advance(fighting, Input.GetKey(Plugin.YieldKey), Time.unscaledDeltaTime, Plugin.YieldHoldSeconds)) Duel.Forfeit();
         }
 
         /// <summary>
@@ -81,5 +55,51 @@ namespace Sparring
 
             return true;
         }
+    }
+
+    /// <summary>
+    /// The yield key's hold: held, not tapped, and only once the fight is actually on. A single
+    /// keypress deciding a duel is one mis-key away from handing someone the win, and letting go
+    /// before the hold completes abandons it — so there is always a way back out of a press you
+    /// did not mean. Nothing here needs the game, so the unit tests hold it as it is.
+    /// </summary>
+    internal sealed class YieldHold
+    {
+        private float _heldFor;
+
+        /// <summary>Whether the key is being held towards a yield.</summary>
+        internal bool Held => _heldFor > 0f;
+
+        /// <summary>How far through the hold it is, 0 to 1; nothing for a hold of no length.</summary>
+        internal float Progress(float holdSeconds)
+        {
+            if (holdSeconds <= 0f) return 0f;
+
+            var share = _heldFor / holdSeconds;
+            return share < 0f ? 0f : share > 1f ? 1f : share;
+        }
+
+        /// <summary>
+        /// One frame of the key: held for <paramref name="dt"/> more seconds while
+        /// <paramref name="fighting"/>, or let go. True on the frame the hold completes, which
+        /// starts it over.
+        /// </summary>
+        internal bool Advance(bool fighting, bool keyDown, float dt, float holdSeconds)
+        {
+            if (!fighting || !keyDown)
+            {
+                _heldFor = 0f;
+                return false;
+            }
+
+            _heldFor += dt;
+            if (_heldFor < holdSeconds) return false;
+
+            _heldFor = 0f;
+            return true;
+        }
+
+        /// <summary>Lets go, as when a keystroke stops belonging to Sparring.</summary>
+        internal void Release() => _heldFor = 0f;
     }
 }
