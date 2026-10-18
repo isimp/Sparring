@@ -781,7 +781,7 @@ namespace Sparring
 
             // The damage path is one other mods patch heavily, and a throw from any of them would
             // otherwise leave the chat window stuck on the command that caused it.
-            Plugin.Log.LogInfo($"Sparring practice: hit for {hit.GetTotalDamage():0.#}.");
+            Plugin.Log.LogInfo(FormattableString.Invariant($"Sparring practice: hit for {hit.GetTotalDamage():0.#}."));
 
             try
             {
@@ -809,8 +809,8 @@ namespace Sparring
             var seman = Kindling(out var me);
             if (seman == null) return;
 
-            var burning = seman.GetStatusEffect(SEMan.s_statusEffectBurning) as SE_Burning
-                          ?? seman.AddStatusEffect(SEMan.s_statusEffectBurning, false, 0, 0f, -1) as SE_Burning;
+            var burning = seman.GetStatusEffect(SEMan.s_statusEffectBurning) as SE_Burning;
+            if (burning == null) burning = seman.AddStatusEffect(SEMan.s_statusEffectBurning, false, 0, 0f, -1) as SE_Burning;
 
             if (burning == null) { Say("The burning effect is not available here."); return; }
 
@@ -824,7 +824,7 @@ namespace Sparring
             }
 
             Say($"Alight for {Mathf.RoundToInt(amount)} over time.");
-            Plugin.Log.LogInfo($"Sparring practice: alight for {amount:0.#}.");
+            Plugin.Log.LogInfo(FormattableString.Invariant($"Sparring practice: alight for {amount:0.#}."));
         }
 
         /// <summary>The same for poison, which the game carries in its own effect.</summary>
@@ -833,15 +833,15 @@ namespace Sparring
             var seman = Kindling(out var me);
             if (seman == null) return;
 
-            var poison = seman.GetStatusEffect(SEMan.s_statusEffectPoison) as SE_Poison
-                         ?? seman.AddStatusEffect(SEMan.s_statusEffectPoison, false, 0, 0f, -1) as SE_Poison;
+            var poison = seman.GetStatusEffect(SEMan.s_statusEffectPoison) as SE_Poison;
+            if (poison == null) poison = seman.AddStatusEffect(SEMan.s_statusEffectPoison, false, 0, 0f, -1) as SE_Poison;
 
             if (poison == null) { Say("The poison effect is not available here."); return; }
 
             // Only a dose larger than whatever is already running takes hold.
             poison.AddDamage(Mathf.Clamp(amount, 1f, 1000f));
             Say($"Poisoned for {Mathf.RoundToInt(amount)} over time.");
-            Plugin.Log.LogInfo($"Sparring practice: poisoned for {amount:0.#}.");
+            Plugin.Log.LogInfo(FormattableString.Invariant($"Sparring practice: poisoned for {amount:0.#}."));
         }
 
         /// <summary>The checks both of the above share, and the effect manager they need.</summary>
@@ -885,7 +885,7 @@ namespace Sparring
 
             BeginWith(me.GetZDOID(), "Practice", terms);
             Say("Practice duel. Take a few hits, then yield or step out of the ring.");
-            Plugin.Log.LogInfo($"Sparring practice: duel begun, ring {terms.Radius:0.#}m.");
+            Plugin.Log.LogInfo(FormattableString.Invariant($"Sparring practice: duel begun, ring {terms.Radius:0.#}m."));
         }
 
         /// <summary>Re-challenge whoever you last fought, if they are still around.</summary>
@@ -913,9 +913,12 @@ namespace Sparring
             _opponentName = "";
             _everPaired = false;
             _unpairedSince = 0.0;
+            _pairDeadline = 0.0;
+            _nextRenew = 0.0;
+            _countedTo = 0;
             _terms = default(Lease.Terms);
-            _outgoing = ZDOID.None;
-            _incoming = ZDOID.None;
+            ClearOutgoing(null, null);
+            ClearIncoming(null, null);
             ArenaRing.Refresh();
 
             // This is the other way out of a practice duel: dying in one, which it does not protect
@@ -945,6 +948,7 @@ namespace Sparring
             _outgoing = ZDOID.None;
             _outgoingName = "";
             _outgoingRadius = 0f;
+            _outgoingUntil = 0.0;
             if (format != null) Say(Messages.Named(format, arg));
         }
 
@@ -953,12 +957,14 @@ namespace Sparring
             _incoming = ZDOID.None;
             _incomingName = "";
             _incomingRadius = 0f;
+            _incomingUntil = 0.0;
             if (format != null) Say(Messages.Named(format, arg));
         }
 
         internal static void Say(string text, MessageHud.MessageType type = MessageHud.MessageType.Center)
         {
-            Player.m_localPlayer?.Message(type, text);
+            var me = Player.m_localPlayer;
+            if (me != null) me.Message(type, text);
         }
     }
 }

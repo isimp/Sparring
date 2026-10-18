@@ -38,6 +38,7 @@ namespace Sparring
             }
             catch
             {
+                // A key the game cannot name, its input not up yet or the key unknown to it, keeps Unity's name.
                 return name;
             }
         }

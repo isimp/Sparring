@@ -311,7 +311,7 @@ namespace Sparring
                     if (component == null) continue;
                     yield return component;
 
-                    var shared = (component as ItemDrop)?.m_itemData?.m_shared;
+                    var shared = component is ItemDrop drop ? drop.m_itemData?.m_shared : null;
                     if (shared == null) continue;
 
                     yield return shared;

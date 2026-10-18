@@ -103,6 +103,7 @@ namespace Sparring
                     }
                     catch (Exception ex)
                     {
+                        // The failure is the check's result, told in the report as a fail.
                         checks.Add(new SelfTestReport.Check("Duel", "the duel against yourself ran to the end", Result.Fail, Fault(ex)));
                         break;
                     }
@@ -133,6 +134,7 @@ namespace Sparring
             }
             catch (Exception ex)
             {
+                // The failure is the area's result, told in the report as a fail.
                 checks.Add(new SelfTestReport.Check(area, "its checks ran", Result.Fail, Fault(ex)));
             }
         }
@@ -153,10 +155,11 @@ namespace Sparring
         private static void Report(List<SelfTestReport.Check> checks)
         {
             var lines = SelfTestReport.Lines(checks);
+            var console = Console.instance;
             foreach (var line in lines)
             {
                 Plugin.Log.LogInfo(line);
-                Console.instance?.AddString(line);
+                if (console != null) console.AddString(line);
             }
 
             try

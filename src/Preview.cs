@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 namespace Sparring
@@ -211,7 +212,7 @@ namespace Sparring
             _messages = Messages.All("Eyvind");
             _messageAt = 0;
             _messageNext = 0f;
-            Duel.Say($"{_messages.Length} messages, one every {MessageGap:0.0}s.");
+            Duel.Say(FormattableString.Invariant($"{_messages.Length} messages, one every {MessageGap:0.0}s."));
             _messageNext = Time.realtimeSinceStartup + MessageGap;
         }
 

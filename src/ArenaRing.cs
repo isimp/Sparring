@@ -52,8 +52,8 @@ namespace Sparring
         /// </summary>
         public static void Sync()
         {
-            if (Time.time < _next) return;
-            _next = Time.time + SyncInterval;
+            if (Time.realtimeSinceStartup < _next) return;
+            _next = Time.realtimeSinceStartup + SyncInterval;
 
             if (!Plugin.ShowArenaRing || ZNet.instance == null || ZDOMan.instance == null)
             {

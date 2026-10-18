@@ -83,8 +83,8 @@ namespace Sparring
             // is owed the difference in writing.
             if (Plugin.DebugCommands)
             {
-                Plugin.Log.LogInfo($"Sparring card: {Outcome} vs {Against}, took {TookTotal:0.#} over {TookHits}, " +
-                                   $"{Seconds:0.#}s, " + (_showUntil > 0f ? "shown." : "withheld."));
+                Plugin.Log.LogInfo(FormattableString.Invariant($"Sparring card: {Outcome} vs {Against}, took {TookTotal:0.#} over {TookHits}, {Seconds:0.#}s, ") +
+                                   (_showUntil > 0f ? "shown." : "withheld."));
             }
         }
 
@@ -103,7 +103,7 @@ namespace Sparring
             // Always after the card was written down, which is why that line cannot carry it.
             if (Plugin.DebugCommands)
             {
-                Plugin.Log.LogInfo($"Sparring card: dealt {GaveTotal:0.#} over {GaveHits}.");
+                Plugin.Log.LogInfo(FormattableString.Invariant($"Sparring card: dealt {GaveTotal:0.#} over {GaveHits}."));
             }
         }
 
