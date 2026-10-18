@@ -38,7 +38,7 @@ If a publish step fails, fix the cause and run the workflow again with the same 
 
 ## Checked by hand
 
-Everything that takes two players reaches beyond one game, and no test runs it for real: the unit tests hold the rules each side applies, and the self-test fights only against yourself. Before a release whose changes touch one, check it in game with a second player, both on the new build:
+Everything that takes two players reaches beyond one game, and no test runs it for real: the unit tests play both sides' duel flow through two simulated games but not the network between two real ones, and the self-test fights only against yourself. Before a release whose changes touch one, check it in game with a second player, both on the new build:
 
 - A challenge accepted, the countdown, a fight to a yield, and the card on both sides with both halves filled in.
 - A challenge declined, withdrawn, walked away from, and repeated too soon, each told on both sides.
