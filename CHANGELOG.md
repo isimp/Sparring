@@ -4,6 +4,8 @@
 
 When a game update changes something Sparring hooks into, Sparring now switches itself off as a whole and says so, rather than `/duel` simply going missing. `/duel` answers that Sparring is off and names what the game changed, the log has the full error, and no duel can start with you until Sparring is updated. Any hook that did go in comes out again, so no duel is ever fought with part of its protection missing.
 
+Felling a tree during a duel raises WoodCutting as it does outside one. `SkillGain` and `SkillGainRate` are meant for weapon skills, Blocking and Dodge, and also caught WoodCutting, which only ever comes from chopping trees.
+
 ## 0.2.2
 
 The Staff of Protection's shield, and any other area effect meant for friendly players, reaches them again. Those effects carry the same mark a duel blow uses to get past the PvP check, and the `RefusePvpBypass` setting treated every such hit from a player you were not duelling as forged and stripped the mark. The setting is gone, and Sparring now only marks its own duel blows and leaves every other hit as the game sent it. An older entry left behind in a config file is ignored.

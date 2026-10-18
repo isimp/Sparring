@@ -75,6 +75,7 @@ namespace Sparring.Tests
         [InlineData((int)Skill.ElementalMagic)]
         [InlineData((int)Skill.BloodMagic)]
         [InlineData((int)Skill.Unarmed)]
+        [InlineData((int)Skill.Pickaxes)]
         [InlineData((int)Skill.Crossbows)]
         [InlineData((int)Skill.Dodge)]
         public void ADuelTeachesWeaponsBlockingAndDodgeAtItsRate(int skill)
@@ -84,6 +85,7 @@ namespace Sparring.Tests
 
         [Theory]
         [InlineData((int)Skill.None)]
+        [InlineData((int)Skill.WoodCutting)]
         [InlineData((int)Skill.Run)]
         [InlineData((int)Skill.Jump)]
         [InlineData((int)Skill.Sneak)]

@@ -51,11 +51,15 @@ namespace Sparring
         /// <summary>
         /// Whether a skill is one fighting teaches. The game numbers weapons and tools 1 to 14 and
         /// everything else from 100 up, so that range plus Dodge covers fighting, and other skills
-        /// such as Run are unaffected.
+        /// such as Run are unaffected. WoodCutting sits in the range but only ever comes from
+        /// chopping trees, never from a blow on a person, so a tree felled in the ring teaches as
+        /// it always does. Pickaxes stays: a pickaxe is a weapon too, and a hit on the opponent
+        /// with one raises it.
         /// </summary>
         private static bool TaughtByFighting(Skills.SkillType skill)
         {
             if (skill == Skills.SkillType.Dodge) return true;
+            if (skill == Skills.SkillType.WoodCutting) return false;
 
             var id = (int)skill;
             return id >= (int)Skills.SkillType.Swords && id <= (int)Skills.SkillType.Crossbows;
