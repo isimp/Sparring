@@ -30,10 +30,14 @@ namespace Sparring
         {
             try
             {
-                if (!(__instance is Player player)) return true;
-                if (player != Player.m_localPlayer) return true;
-                if (player.IsDead() || player.GetHealth() > 0f) return true;
-                if (!Duel.ShouldSurvive(player)) return true;
+                var player = __instance as Player;
+                var isPlayer = !(player is null);
+                var yields = HookRules.Yields(isPlayer,
+                    isPlayer && player == Player.m_localPlayer,
+                    isPlayer && player.IsDead(),
+                    isPlayer ? player.GetHealth() : 0f,
+                    () => Duel.ShouldSurvive(player));
+                if (!yields) return true;
 
                 Duel.YieldTo();
                 return false;
@@ -93,9 +97,9 @@ namespace Sparring
         {
             try
             {
-                if (__state < 0f || hit == null) return;
+                if (hit == null) return;
                 if (__instance == null || __instance != Player.m_localPlayer) return;
-                if (__instance.GetHealth() >= __state) return;
+                if (!HookRules.Landed(__state, __instance.GetHealth())) return;
 
                 Scorecard.Count(hit.GetTotalDamage(), hit.GetAttacker(), hit);
             }
@@ -171,7 +175,7 @@ namespace Sparring
         /// then argued with.
         ///
         /// Read off the lease rather than the local duel, so it holds whichever of the two fighters
-        /// is swinging. A forged claim would buy someone nothing but an inability to break things.
+        /// is swinging (<see cref="HookRules.SparesBuilding"/>).
         ///
         /// Only built pieces. Trees, rocks and terrain are not covered — a duel in a forest will
         /// still take the forest down with it.
@@ -182,13 +186,12 @@ namespace Sparring
         {
             try
             {
-                if (!Plugin.ProtectBuildings || hit == null) return true;
+                if (hit == null) return true;
 
                 var attacker = hit.GetAttacker();
-                if (!(attacker is Player)) return true;
-
-                if (Preview.Rehearsing(attacker)) return false;
-                return !Lease.Corroborated(attacker, out _);
+                var byPlayer = attacker is Player;
+                return !HookRules.SparesBuilding(Plugin.ProtectBuildings, byPlayer,
+                    byPlayer && Preview.Rehearsing(attacker), byPlayer && Lease.Corroborated(attacker, out _));
             }
             catch (Exception ex)
             {
@@ -198,17 +201,10 @@ namespace Sparring
         }
 
         /// <summary>
-        /// Scales — or withholds — the skill a duel teaches.
-        ///
-        /// Duelling trains skills without any help from this mod: a landed blow raises the weapon
-        /// skill at <c>Attack.cs:1074</c>, a block raises Blocking inside <c>BlockAttack</c>, and a
-        /// perfect dodge is credited at <c>Attack.cs:1151</c>, just past the target filter the
-        /// IsEnemy patch opens. Since nobody dies and both sides are healed, how much a duel
-        /// teaches is left to the server.
-        ///
-        /// Only fighting skills are touched. The skill enum numbers weapons and tools 1 to 14 and
-        /// everything else from 100 up, so that range plus Dodge covers fighting, and other skills
-        /// such as Run are unaffected.
+        /// Scales — or withholds — the skill a duel teaches (<see cref="HookRules.Teach"/>).
+        /// A landed blow raises the weapon skill in <c>Attack</c>, a block raises Blocking inside
+        /// <c>BlockAttack</c>, and a perfect dodge is credited just past the target filter the
+        /// IsEnemy hook opens; all of them pass through here.
         /// </summary>
         [HarmonyPrefix]
         [HarmonyPatch(typeof(Player), nameof(Player.RaiseSkill))]
@@ -216,31 +212,14 @@ namespace Sparring
         {
             try
             {
-                if (__instance != Player.m_localPlayer) return true;
-
-                // Not while counting down: no blow lands then, so nothing should be learned either.
-                var fighting = Preview.Sparring || (Duel.Active && !Duel.CountingDown);
-                if (!fighting) return true;
-                if (!TaughtByFighting(skill)) return true;
-
-                if (!Plugin.SkillGain) return false;
-
-                value *= Plugin.SkillGainRate;
-                return true;
+                return HookRules.Teach(__instance == Player.m_localPlayer, Preview.Sparring, Duel.Active, Duel.CountingDown,
+                    skill, Plugin.SkillGain, Plugin.SkillGainRate, ref value);
             }
             catch (Exception ex)
             {
                 Plugin.Log.LogDebug($"Sparring could not weigh a skill gain: {ex.Message}");
                 return true;
             }
-        }
-
-        private static bool TaughtByFighting(Skills.SkillType skill)
-        {
-            if (skill == Skills.SkillType.Dodge) return true;
-
-            var id = (int)skill;
-            return id >= (int)Skills.SkillType.Swords && id <= (int)Skills.SkillType.Crossbows;
         }
 
         /// <summary>

@@ -194,6 +194,24 @@ namespace Sparring.Tests
         }
 
         [Fact]
+        public void AnOpponentWhoIsBeyondAnyRingIsCalledOffAndNobodyWins()
+        {
+            Fighting();
+            _ana.Health = 40f;
+            _bo.X = 500f;
+
+            // Ana's own game judges first; Bo's may meanwhile concede for leaving the ring.
+            _server.Now += 0.25;
+            _ana.Flow.Tick();
+
+            Assert.False(_ana.Flow.Active);
+            Assert.Equal(EndReason.OutOfRange, _ana.Flow.LastEnd);
+            Assert.Contains(Messages.OutOfRing, _ana.Said);
+            Assert.Equal(40f, _ana.Health, 3);
+            Assert.Contains("send result " + EndReason.OutOfRange, _ana.Events);
+        }
+
+        [Fact]
         public void FightersAtOppositeEdgesOfTheRingFightOn()
         {
             Fighting(radius: 30f);

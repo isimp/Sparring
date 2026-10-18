@@ -207,6 +207,47 @@ namespace Sparring.Tests
             Assert.Contains(Sound.Cue.CameToNothing, _ana.Heard);
         }
 
+        [Theory]
+        [InlineData((int)Busy.InCombat, Messages.TheyInCombat)]
+        [InlineData((int)Busy.PvpOn, Messages.TheyPvpOn)]
+        [InlineData((int)Busy.CreaturesNear, Messages.TheyCreaturesAbout)]
+        [InlineData((int)Busy.Occupied, Messages.TheyBusy)]
+        [InlineData((int)Busy.Dueling, Messages.TheyDueling)]
+        [InlineData((int)Busy.Answering, Messages.TheyAnswering)]
+        [InlineData((int)Busy.Cooldown, Messages.WaitBeforeAgain)]
+        [InlineData((int)Busy.TooFar, Messages.TooFarAway)]
+        public void TheChallengerIsToldWhyTheirChallengeWasTurnedDown(int why, string line)
+        {
+            _ana.Challenge(_bo);
+            _server.Post(Ana, () => _ana.Flow.ReceiveBusy(Bo, (Busy)why));
+            _server.InFlight.Dequeue();
+            _server.Deliver();
+
+            Assert.False(_ana.Flow.HasOutgoing);
+            Assert.Contains(Messages.Named(line, "Bo"), _ana.Said);
+            Assert.Contains(Sound.Cue.CameToNothing, _ana.Heard);
+        }
+
+        [Theory]
+        [InlineData("combat", Messages.InCombat)]
+        [InlineData("asleep", Messages.YouAreBusy)]
+        [InlineData("pvp", Messages.PvpOn)]
+        [InlineData("creatures", Messages.CreaturesAbout)]
+        public void AChallengerWhoIsNotFreeIsToldWhy(string how, string line)
+        {
+            switch (how)
+            {
+                case "combat": _ana.Standing.InCombat = true; break;
+                case "asleep": _ana.Standing.Sleeping = true; break;
+                case "pvp": _ana.Standing.PvpOn = true; break;
+                case "creatures": _ana.Hostile = true; break;
+            }
+            _ana.Challenge(_bo);
+
+            Assert.Contains(line, _ana.Said);
+            Assert.DoesNotContain("send challenge", _ana.Events);
+        }
+
         [Fact]
         public void TheSameTwoWaitFifteenSecondsAfterAChallengeCameToNothing()
         {
